@@ -54,6 +54,18 @@ public class PedidosController : ControllerBase
         return pedido is null ? NotFound() : Ok(pedido);
     }
 
+    [HttpGet("entregados/usuario/{usuarioId}")]
+    public async Task<IActionResult> ObtenerPedidosEntregados(string usuarioId)
+    {
+        var (items, total) = await _pedidoRepository.ObtenerAsync(
+            usuarioId: usuarioId,
+            estado: "ENTREGADO",
+            skip: 0,
+            limit: 100
+        );
+        return Ok(new { total, items });
+    }
+
     [HttpPost]
     public async Task<IActionResult> CrearPedido([FromBody] Pedido nuevoPedido)
     {

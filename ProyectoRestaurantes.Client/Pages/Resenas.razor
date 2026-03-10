@@ -106,22 +106,41 @@
                 }
                 <div class="form-group">
                     <label class="form-label">Usuario</label>
-                    <select @bind="fUsuId" class="form-control">
+                    <select @bind="fUsuId" @bind:after="OnUsuarioChanged" class="form-control">
                         <option value="">Selecciona un usuario...</option>
                         @foreach (var u in usuariosList) { <option value="@u.Id">@u.Nombre (@u.Email)</option> }
                     </select>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Restaurante</label>
-                    <select @bind="fRestId" class="form-control">
-                        <option value="">Selecciona un restaurante...</option>
-                        @foreach (var r in restaurantesList) { <option value="@r.Id">@r.Nombre</option> }
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">ID Pedido (referenciado)</label>
-                    <input @bind="fPedidoId" class="form-control" placeholder="ObjectId del pedido"/>
-                </div>
+                @if (!string.IsNullOrEmpty(fUsuId))
+                {
+                    <div class="form-group">
+                        <label class="form-label">Pedido Entregado</label>
+                        <select @bind="fPedidoId" @bind:after="OnPedidoChanged" class="form-control">
+                            <option value="">Selecciona un pedido entregado...</option>
+                            @foreach (var p in pedidosEntregados)
+                            {
+                                <option value="@p.Id">@p.Restaurante - Q@(p.Total.ToString("0.00")) - @p.Fecha.ToString("dd/MM/yyyy")</option>
+                            }
+                        </select>
+                        @if (!pedidosEntregados.Any())
+                        {
+                            <small style="color:var(--text-muted);">Este usuario no tiene pedidos entregados</small>
+                        }
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(fPedidoId))
+                {
+                    <div class="form-group">
+                        <label class="form-label">Articulo a Calificar</label>
+                        <select @bind="fArticuloId" class="form-control">
+                            <option value="">Selecciona un articulo del pedido...</option>
+                            @foreach (var item in articulosPedido)
+                            {
+                                <option value="@item.Id">@item.Nombre (x@item.Cantidad)</option>
+                            }
+                        </select>
+                    </div>
+                }
                 <div class="form-group">
                     <label class="form-label">Calificacion</label>
                     <div class="stars">
@@ -156,11 +175,16 @@
     private string restFiltro="", usuFiltro="", msgGlobal="", msgModal="";
     private int calMinFiltro=0, pagina=0, limite=15, total=0;
     private bool cargando, guardando, crearModal, modalErr, isErr;
-    private string fUsuId="", fRestId="", fPedidoId="", fComentario=""; private int fCalificacion=5;
+    private string fUsuId="", fRestId="", fPedidoId="", fArticuloId="", fComentario=""; private int fCalificacion=5;
 
     private class DtoSelect { public string Id=""; public string Nombre=""; public string Email=""; }
+    private class PedidoDto { public string Id=""; public string Restaurante=""; public double Total; public DateTime Fecha; }
+    private class ArticuloDto { public string Id=""; public string Nombre=""; public int Cantidad; }
+
     private List<DtoSelect> restaurantesList = new();
     private List<DtoSelect> usuariosList = new();
+    private List<PedidoDto> pedidosEntregados = new();
+    private List<ArticuloDto> articulosPedido = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -213,14 +237,94 @@
     private async Task Buscar() { pagina=0; await CargarAsync(); }
     private async Task CambiarPagina(int p) { pagina=p; await CargarAsync(); }
 
+    private async Task OnUsuarioChanged()
+    {
+        fPedidoId = "";
+        fArticuloId = "";
+        fRestId = "";
+        pedidosEntregados.Clear();
+        articulosPedido.Clear();
+
+        if (string.IsNullOrEmpty(fUsuId)) return;
+
+        var r = await Api.GetPedidosEntregadosUsuarioAsync(fUsuId);
+        if (r.HasValue)
+        {
+            pedidosEntregados = r.Value.GetProperty("items").EnumerateArray().Select(i =>
+            {
+                var rest = i.TryGetProperty("restaurante", out var r) ? r : default;
+                return new PedidoDto
+                {
+                    Id = i.TryGetProperty("_id", out var id) ? id.GetString()! : "",
+                    Restaurante = rest.ValueKind != System.Text.Json.JsonValueKind.Undefined && rest.TryGetProperty("nombre", out var rn) ? rn.GetString()! : "?",
+                    Total = i.TryGetProperty("totalPagar", out var t) ? t.GetDouble() : 0,
+                    Fecha = i.TryGetProperty("fechaCreacion", out var f) ? f.GetDateTime().ToLocalTime() : DateTime.MinValue
+                };
+            }).ToList();
+        }
+    }
+
+    private async Task OnPedidoChanged()
+    {
+        fArticuloId = "";
+        fRestId = "";
+        articulosPedido.Clear();
+
+        if (string.IsNullOrEmpty(fPedidoId)) return;
+
+        var pedido = await Api.GetPedidoPorIdAsync(fPedidoId);
+        if (pedido.HasValue)
+        {
+            fRestId = pedido.Value.TryGetProperty("restaurante_id", out var rid) ? rid.GetString()! :
+                (pedido.Value.TryGetProperty("restauranteId", out var rid2) ? rid2.GetString()! : "");
+
+            if (pedido.Value.TryGetProperty("items", out var items))
+            {
+                articulosPedido = items.EnumerateArray().Select(item => new ArticuloDto
+                {
+                    Id = item.TryGetProperty("articulo_id", out var aid) ? aid.GetString()! :
+                        (item.TryGetProperty("articuloId", out var aid2) ? aid2.GetString()! : ""),
+                    Nombre = item.TryGetProperty("nombre_copia", out var n) ? n.GetString()! :
+                        (item.TryGetProperty("nombreCopia", out var n2) ? n2.GetString()! : "?"),
+                    Cantidad = item.TryGetProperty("cantidad", out var c) ? c.GetInt32() : 1
+                }).ToList();
+            }
+        }
+    }
+
     private async Task Crear()
     {
-        if (string.IsNullOrEmpty(fUsuId)||string.IsNullOrEmpty(fRestId)) { msgModal="ID usuario y restaurante son requeridos."; modalErr=true; return; }
-        guardando=true;
-        var ok = await Api.CrearResenaAsync(new { usuarioId=fUsuId, restauranteId=fRestId, pedidoId=fPedidoId, calificacion=fCalificacion, comentario=fComentario });
-        if (ok) { crearModal=false; msgGlobal="Resena publicada y rating actualizado."; isErr=false; await CargarAsync(); }
-        else { msgModal="Error al publicar."; modalErr=true; }
-        guardando=false;
+        if (string.IsNullOrEmpty(fUsuId) || string.IsNullOrEmpty(fPedidoId) || string.IsNullOrEmpty(fArticuloId))
+        {
+            msgModal = "Debes seleccionar usuario, pedido y articulo.";
+            modalErr = true;
+            return;
+        }
+
+        guardando = true;
+        var ok = await Api.CrearResenaAsync(new
+        {
+            usuarioId = fUsuId,
+            restauranteId = fRestId,
+            pedidoId = fPedidoId,
+            articuloId = fArticuloId,
+            calificacion = fCalificacion,
+            comentario = fComentario
+        });
+
+        if (ok)
+        {
+            crearModal = false;
+            msgGlobal = "Resena publicada y rating actualizado.";
+            isErr = false;
+            await CargarAsync();
+        }
+        else
+        {
+            msgModal = "Error al publicar.";
+            modalErr = true;
+        }
+        guardando = false;
     }
 
     private async Task Eliminar(string id)

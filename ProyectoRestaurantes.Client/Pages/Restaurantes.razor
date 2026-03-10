@@ -206,8 +206,10 @@
                 Nombre = i.TryGetProperty("nome", out _) ? "" : (i.TryGetProperty("nombre", out var n) ? n.GetString()! : ""),
                 Categoria = i.TryGetProperty("categoria", out var cat) ? cat.GetString()! : "",
                 DuenoId = i.TryGetProperty("duenoId", out var d) ? d.GetString()! : "",
-                RatingPromedio = i.TryGetProperty("rating_promedio", out var rp) || i.TryGetProperty("ratingPromedio", out rp) ? rp.GetDouble() : 0,
+                RatingPromedio = i.TryGetProperty("ratingPromedio", out var rp) ? rp.GetDouble() : 0,
                 Activo = i.TryGetProperty("activo", out var a) ? a.GetBoolean() : false,
+                Lat = i.TryGetProperty("ubicacion", out var ub) && ub.TryGetProperty("coordinates", out var coords) && coords.GetArrayLength() > 1 ? coords[1].GetDouble() : 0,
+                Lon = i.TryGetProperty("ubicacion", out var ub2) && ub2.TryGetProperty("coordinates", out var coords2) && coords2.GetArrayLength() > 0 ? coords2[0].GetDouble() : 0,
             }).ToList();
         }
         cargando = false;

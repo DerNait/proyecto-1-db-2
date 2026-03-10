@@ -197,11 +197,12 @@
 
         var rArt = await Api.GetArticulosAsync(disponible: true, skip: 0, limit: 500);
         if (rArt.HasValue) articulosList = rArt.Value.GetProperty("items").EnumerateArray()
-            .Select(i => new DtoSelect { 
-                Id=i.GetProperty("id").GetString()!, 
-                Nombre=i.GetProperty("nombre").GetString()!, 
+            .Select(i => new DtoSelect {
+                Id=i.GetProperty("id").GetString()!,
+                Nombre=i.GetProperty("nombre").GetString()!,
                 Precio=i.GetProperty("precio").GetDouble(),
-                RestauranteId=i.TryGetProperty("restauranteId", out var rest) ? rest.GetString()! : ""
+                RestauranteId=(i.TryGetProperty("restauranteId", out var rest) ? rest.GetString() : null)
+                    ?? (i.TryGetProperty("restaurante_id", out var rest2) ? rest2.GetString() : null) ?? ""
             }).ToList();
     }
 

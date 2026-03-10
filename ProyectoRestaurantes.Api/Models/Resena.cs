@@ -21,6 +21,10 @@ public class Resena
     [BsonRepresentation(BsonType.ObjectId)]
     public string PedidoId { get; set; } = null!;
 
+    [BsonElement("articulo_id")]
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string? ArticuloId { get; set; }
+
     [BsonElement("calificacion")]
     public int Calificacion { get; set; }
 

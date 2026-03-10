@@ -184,6 +184,22 @@ public class ApiService
         return (res.IsSuccessStatusCode, body);
     }
 
+    public async Task<JsonElement?> GetPedidosEntregadosUsuarioAsync(string usuarioId)
+    {
+        SetAuth();
+        var res = await _http.GetAsync($"{BaseUrl}/pedidos/entregados/usuario/{usuarioId}");
+        if (!res.IsSuccessStatusCode) return null;
+        return await res.Content.ReadFromJsonAsync<JsonElement>();
+    }
+
+    public async Task<JsonElement?> GetPedidoPorIdAsync(string id)
+    {
+        SetAuth();
+        var res = await _http.GetAsync($"{BaseUrl}/pedidos/{id}");
+        if (!res.IsSuccessStatusCode) return null;
+        return await res.Content.ReadFromJsonAsync<JsonElement>();
+    }
+
     // --- Reseñas ---
     public async Task<JsonElement?> GetResenasAsync(string? restauranteId = null, string? usuarioId = null,
         int? calMin = null, int skip = 0, int limit = 20)
