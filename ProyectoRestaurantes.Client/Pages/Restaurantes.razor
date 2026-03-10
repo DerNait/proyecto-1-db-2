@@ -1,0 +1,255 @@
+@page "/restaurantes"
+@inject ApiService Api
+
+<PageTitle>Restaurantes - RestaurantOS</PageTitle>
+
+<div class="page-header">
+    <div class="page-header-row">
+        <div>
+            <h1>Restaurantes</h1>
+            <p>Gestion completa de restaurantes del sistema</p>
+        </div>
+        <button class="btn btn-primary" @onclick='()=>AbrirModal(null)'>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo Restaurante
+        </button>
+    </div>
+</div>
+
+<div class="filter-row">
+    <div class="search-bar" style="flex:1;min-width:200px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input @bind="busqueda" @bind:event="oninput" @onkeyup="OnBusquedaKeyUp" class="form-control" placeholder="Buscar restaurante..." />
+    </div>
+    <select @bind="categoriaFiltro" class="form-control" style="width:160px;">
+        <option value="">Todas las categorias</option>
+        @foreach (var c in categorias) { <option value="@c">@c</option> }
+    </select>
+    <select @bind="activoFiltro" class="form-control" style="width:130px;">
+        <option value="">Todos</option>
+        <option value="true">Solo activos</option>
+        <option value="false">Solo inactivos</option>
+    </select>
+    <button class="btn btn-secondary" @onclick="Buscar">Filtrar</button>
+</div>
+
+@if (!string.IsNullOrEmpty(msgGlobal))
+{
+    <div class="alert @(isErr?"alert-error":"alert-success")">@msgGlobal</div>
+}
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">@total restaurante(s) encontrados</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <select @bind="sortPor" class="form-control" style="width:140px;">
+                <option value="nombre">Nombre</option>
+                <option value="rating_promedio">Rating</option>
+                <option value="categoria">Categoria</option>
+            </select>
+            <button class="btn btn-ghost btn-sm" @onclick="()=>{sortDir=sortDir*-1;Buscar();}">
+                @(sortDir==1?"Asc":"Desc")
+            </button>
+        </div>
+    </div>
+    @if (cargando) {
+        <div class="loading-indicator"><div class="spinner"></div>Cargando...</div>
+    } else if (!restaurantes.Any()) {
+        <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+            <h3>Sin restaurantes</h3>
+            <p>Crea el primero con el boton de arriba</p>
+        </div>
+    } else {
+        <div class="table-wrapper">
+            <table>
+                <thead><tr>
+                    <th>Nombre</th><th>Categoria</th><th>Rating</th><th>Estado</th><th>Acciones</th>
+                </tr></thead>
+                <tbody>
+                @foreach (var r in restaurantes)
+                {
+                    <tr>
+                        <td style="font-weight:600;">@r.Nombre</td>
+                        <td><span class="badge badge-info">@r.Categoria</span></td>
+                        <td>
+                            <div class="stars" style="gap:1px;">
+                                @for(int i=1;i<=5;i++){
+                                    var filled = i <= (int)Math.Round(r.RatingPromedio);
+                                    <span class="star @(filled?"filled":"empty")" style="font-size:13px;">&#9733;</span>
+                                }
+                            </div>
+                            <small style="color:var(--text-muted);">@r.RatingPromedio.ToString("0.0")</small>
+                        </td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span class="status-dot @(r.Activo?"active":"inactive")"></span>
+                                @(r.Activo ? "Activo" : "Inactivo")
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:6px;">
+                                <button class="btn btn-ghost btn-sm" @onclick="()=>AbrirModal(r)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                                <button class="btn btn-danger btn-sm" @onclick="()=>Eliminar(r.Id!)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div style="padding:16px;">
+            <div class="pagination">
+                <button class="page-btn" @onclick="()=>CambiarPagina(pagina-1)" disabled="@(pagina==0)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <span class="page-info">Pagina @(pagina+1) de @totalPaginas</span>
+                <button class="page-btn" @onclick="()=>CambiarPagina(pagina+1)" disabled="@(pagina>=totalPaginas-1)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@if (modalVisible)
+{
+    <div class="modal-overlay" @onclick:stopPropagation="true">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">@(editId==null?"Nuevo Restaurante":"Editar Restaurante")</div>
+                <button class="modal-close" @onclick="CerrarModal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(msgModal)) { <div class="alert @(modalErr?"alert-error":"alert-success")">@msgModal</div> }
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Nombre</label>
+                        <input @bind="fNombre" class="form-control" placeholder="Nombre del restaurante"/>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Categoria</label>
+                        <input @bind="fCategoria" class="form-control" placeholder="Ej: Mexicana, Italiana..."/>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ID del Dueno</label>
+                    <input @bind="fDuenoId" class="form-control" placeholder="ObjectId del usuario dueno"/>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Latitud</label>
+                        <input @bind="fLat" class="form-control" type="number" step="0.0001"/>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Longitud</label>
+                        <input @bind="fLon" class="form-control" type="number" step="0.0001"/>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="display:flex;align-items:center;gap:8px;">
+                        <input type="checkbox" @bind="fActivo"/> Restaurante activo
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CerrarModal">Cancelar</button>
+                <button class="btn btn-primary" @onclick="Guardar" disabled="@guardando">
+                    @if (guardando) { <div class="spinner" style="width:14px;height:14px;"></div> }
+                    @(editId==null?"Crear":"Actualizar")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private class RestauranteVm { public string? Id; public string Nombre=""; public string Categoria=""; public string DuenoId=""; public double RatingPromedio; public bool Activo; public double Lat; public double Lon; }
+
+    private List<RestauranteVm> restaurantes = new();
+    private List<string> categorias = new();
+    private string busqueda="", categoriaFiltro="", activoFiltro="";
+    private string sortPor = "nombre"; private int sortDir = 1;
+    private int pagina=0, limite=15, total=0;
+    private int totalPaginas => (int)Math.Ceiling((double)total/limite);
+    private bool cargando, guardando, modalVisible, modalErr, isErr;
+    private string msgGlobal="", msgModal="", editId="";
+    private string fNombre="", fCategoria="", fDuenoId=""; private double fLat, fLon; private bool fActivo=true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarCategoriasAsync();
+        await CargarAsync();
+    }
+
+    private async Task CargarCategoriasAsync()
+    {
+        var r = await Api.GetCategoriasAsync();
+        if (r.HasValue)
+            categorias = r.Value.EnumerateArray().Select(e => e.GetString()!).ToList();
+    }
+
+    private async Task CargarAsync()
+    {
+        cargando = true;
+        bool? activo = activoFiltro == "true" ? true : activoFiltro == "false" ? false : null;
+        var r = await Api.GetRestaurantesAsync(busqueda, categoriaFiltro, activo, sortPor, sortDir, pagina * limite, limite);
+        if (r.HasValue)
+        {
+            total = r.Value.GetProperty("total").GetInt32();
+            restaurantes = r.Value.GetProperty("items").EnumerateArray().Select(i => new RestauranteVm
+            {
+                Id = i.TryGetProperty("id", out var id) ? id.GetString() : null,
+                Nombre = i.TryGetProperty("nome", out _) ? "" : (i.TryGetProperty("nombre", out var n) ? n.GetString()! : ""),
+                Categoria = i.TryGetProperty("categoria", out var cat) ? cat.GetString()! : "",
+                DuenoId = i.TryGetProperty("duenoId", out var d) ? d.GetString()! : "",
+                RatingPromedio = i.TryGetProperty("ratingPromedio", out var rp) ? rp.GetDouble() : 0,
+                Activo = i.TryGetProperty("activo", out var a) ? a.GetBoolean() : false,
+            }).ToList();
+        }
+        cargando = false;
+    }
+
+    private async Task Buscar() { pagina = 0; await CargarAsync(); }
+    private async Task CambiarPagina(int p) { pagina = p; await CargarAsync(); }
+    private async Task OnBusquedaKeyUp(KeyboardEventArgs e) { if (e.Key == "Enter") await Buscar(); }
+
+    private void AbrirModal(RestauranteVm? r)
+    {
+        msgModal = ""; editId = r?.Id ?? null!;
+        fNombre = r?.Nombre ?? "";
+        fCategoria = r?.Categoria ?? "";
+        fDuenoId = r?.DuenoId ?? "";
+        fLat = r?.Lat ?? 0; fLon = r?.Lon ?? 0;
+        fActivo = r?.Activo ?? true;
+        modalVisible = true;
+    }
+    private void CerrarModal() => modalVisible = false;
+
+    private async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(fNombre)) { msgModal = "El nombre es requerido."; modalErr = true; return; }
+        guardando = true; msgModal = "";
+        var payload = new { nombre = fNombre, categoria = fCategoria, duenoId = fDuenoId,
+            ubicacion = new { type = "Point", coordinates = new[] { fLon, fLat } }, activo = fActivo, ratingPromedio = 0.0 };
+        bool ok = editId == null
+            ? await Api.CrearRestauranteAsync(payload)
+            : await Api.ActualizarRestauranteAsync(editId, payload);
+        if (ok) { modalVisible = false; await CargarAsync(); msgGlobal = editId==null?"Restaurante creado.":"Restaurante actualizado."; isErr=false; }
+        else { msgModal = "Error al guardar."; modalErr = true; }
+        guardando = false;
+    }
+
+    private async Task Eliminar(string id)
+    {
+        var ok = await Api.EliminarRestauranteAsync(id);
+        msgGlobal = ok ? "Restaurante eliminado." : "Error al eliminar."; isErr = !ok;
+        if (ok) await CargarAsync();
+    }
+}

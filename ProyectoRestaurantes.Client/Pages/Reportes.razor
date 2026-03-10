@@ -1,0 +1,174 @@
+@page "/reportes"
+@inject ApiService Api
+
+<PageTitle>Reportes - RestaurantOS</PageTitle>
+
+<div class="page-header">
+    <h1>Reportes y Analisis</h1>
+    <p>Agregaciones simples y complejas con pipelines de MongoDB</p>
+</div>
+
+@if (cargando)
+{
+    <div class="loading-indicator"><div class="spinner"></div>Generando reportes...</div>
+}
+else
+{
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Top Restaurantes por Rating</div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <select @bind="limiteTop" class="form-control" style="width:70px;font-size:0.8rem;">
+                        <option value="5">Top 5</option>
+                        <option value="10">Top 10</option>
+                        <option value="20">Top 20</option>
+                    </select>
+                    <button class="btn btn-ghost btn-sm" @onclick="CargarAsync">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (topRestaurantes.Any())
+                {
+                    <div class="bar-chart">
+                        @foreach (var r in topRestaurantes)
+                        {
+                            var pct = (r.Rating / 5.0) * 100;
+                            <div class="bar-item">
+                                <div class="bar-label" title="@r.Nombre">@r.Nombre</div>
+                                <div class="bar-track"><div class="bar-fill" style="width:@pct.ToString("0.0")%"></div></div>
+                                <div class="bar-value">@r.Rating.ToString("0.0") <span style="font-size:0.7rem;color:var(--text-muted);">(@r.Total res.)</span></div>
+                            </div>
+                        }
+                    </div>
+                } else { <p style="color:var(--text-muted);text-align:center;">Sin datos</p> }
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Platillos Mas Vendidos</div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <select @bind="limitePlatillos" class="form-control" style="width:70px;font-size:0.8rem;">
+                        <option value="5">Top 5</option>
+                        <option value="10">Top 10</option>
+                        <option value="20">Top 20</option>
+                    </select>
+                    <button class="btn btn-ghost btn-sm" @onclick="CargarAsync">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (platillos.Any())
+                {
+                    var maxV = platillos.Max(p => p.Cantidad);
+                    <div class="bar-chart">
+                        @foreach (var p in platillos)
+                        {
+                            var pct = maxV > 0 ? ((double)p.Cantidad / maxV) * 100 : 0;
+                            <div class="bar-item">
+                                <div class="bar-label" title="@p.Nombre">@p.Nombre</div>
+                                <div class="bar-track"><div class="bar-fill" style="width:@pct.ToString("0.0")%;background:linear-gradient(90deg,#10b981,#059669)"></div></div>
+                                <div class="bar-value">@p.Cantidad</div>
+                            </div>
+                        }
+                    </div>
+                } else { <p style="color:var(--text-muted);text-align:center;">Sin datos de ventas</p> }
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Estadisticas de Resenas por Restaurante (Agregacion Compleja con $lookup)</div>
+        </div>
+        @if (estadisticasResenas.Any())
+        {
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Restaurante</th><th>Total Resenas</th><th>Promedio</th><th>Minimo</th><th>Maximo</th><th>Distribucion</th></tr></thead>
+                    <tbody>
+                    @foreach (var e in estadisticasResenas)
+                    {
+                        <tr>
+                            <td style="font-weight:600;">@e.NombreRestaurante</td>
+                            <td><span class="badge badge-primary">@e.Total</span></td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:6px;">
+                                    <span class="stars">
+                                        @for(int i=1;i<=5;i++) { <span class="star @(i<=Math.Round(e.Promedio)?"filled":"empty")" style="font-size:12px;">&#9733;</span> }
+                                    </span>
+                                    <span style="font-weight:700;">@e.Promedio.ToString("0.1")</span>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-danger">@e.Min</span></td>
+                            <td><span class="badge badge-success">@e.Max</span></td>
+                            <td>
+                                <div class="bar-track" style="width:120px;height:6px;">
+                                    <div class="bar-fill" style="width:@((e.Promedio/5.0*100).ToString("0"))%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        } else {
+            <div class="empty-state" style="padding:32px;"><p>Sin resenas registradas</p></div>
+        }
+    </div>
+}
+
+@code {
+    private record TopRestR(string Nombre, double Rating, int Total);
+    private record PlatilloR(string Nombre, int Cantidad);
+    private record EstResenas(string NombreRestaurante, int Total, double Promedio, int Min, int Max);
+
+    private List<TopRestR> topRestaurantes = new();
+    private List<PlatilloR> platillos = new();
+    private List<EstResenas> estadisticasResenas = new();
+    private bool cargando = true;
+    private int limiteTop = 5, limitePlatillos = 5;
+
+    protected override async Task OnInitializedAsync() => await CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        cargando=true;
+        var topTask = Api.GetTopRestaurantesAsync(limiteTop);
+        var platTask = Api.GetPlatillosMasVendidosAsync(limitePlatillos);
+        var statsTask = Api.GetEstadisticasResenasAsync();
+        await Task.WhenAll(topTask, platTask, statsTask);
+
+        var top = await topTask;
+        if (top.HasValue)
+            topRestaurantes = top.Value.EnumerateArray().Select(r => new TopRestR(
+                r.TryGetProperty("Nombre", out var n) ? n.GetString()! : "?",
+                r.TryGetProperty("Promedio", out var p) ? p.GetDouble() : 0,
+                r.TryGetProperty("TotalResenas", out var t) ? t.GetInt32() : 0)).ToList();
+
+        var plat = await platTask;
+        if (plat.HasValue)
+            platillos = plat.Value.EnumerateArray().Select(p => new PlatilloR(
+                p.TryGetProperty("Nombre", out var n) ? n.GetString()! : "?",
+                p.TryGetProperty("CantidadVendida", out var c) ? c.GetInt32() : 0)).ToList();
+
+        var stats = await statsTask;
+        if (stats.HasValue)
+            estadisticasResenas = stats.Value.EnumerateArray().Select(e =>
+            {
+                var rest = e.TryGetProperty("restaurante", out var r) ? r : default;
+                return new EstResenas(
+                    rest.ValueKind != System.Text.Json.JsonValueKind.Undefined && rest.TryGetProperty("nombre", out var rn) ? rn.GetString()! : "?",
+                    e.TryGetProperty("totalResenas", out var t) ? t.GetInt32() : 0,
+                    e.TryGetProperty("promedioCalificacion", out var p) ? p.GetDouble() : 0,
+                    e.TryGetProperty("minCalificacion", out var min) ? min.GetInt32() : 0,
+                    e.TryGetProperty("maxCalificacion", out var max) ? max.GetInt32() : 0);
+            }).ToList();
+
+        cargando=false;
+    }
+}

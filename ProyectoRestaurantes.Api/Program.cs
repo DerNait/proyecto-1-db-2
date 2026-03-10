@@ -28,12 +28,21 @@ builder.Services.AddScoped(sp =>
     var client = sp.GetRequiredService<IMongoClient>();
     return client.GetDatabase(settings.DatabaseName);
 });
+
+// Servicios y Repositorios
 builder.Services.AddScoped<PedidoService>();
-builder.Services.AddScoped<ReportesRepository>();
+builder.Services.AddScoped<GridFsService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<ReportesRepository>();
+builder.Services.AddScoped<RestauranteRepository>();
+builder.Services.AddScoped<ArticuloRepository>();
+builder.Services.AddScoped<UsuarioRepository>();
+builder.Services.AddScoped<ResenaRepository>();
+builder.Services.AddScoped<PedidoRepository>();
 
 // Configuración por defecto de la API
 builder.Services.AddControllers();
+
 // Permitir que Blazor (o cualquier frontend) se conecte a la API
 builder.Services.AddCors(options =>
 {
@@ -46,6 +55,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddEndpointsApiExplorer();
+
 // Configurar Autenticación JWT
 var jwtKey = builder.Configuration["Jwt:Key"];
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

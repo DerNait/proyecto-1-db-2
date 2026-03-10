@@ -1,0 +1,203 @@
+@page "/usuarios"
+@inject ApiService Api
+
+<PageTitle>Usuarios - RestaurantOS</PageTitle>
+
+<div class="page-header">
+    <div class="page-header-row">
+        <div><h1>Usuarios</h1><p>Gestion de usuarios y documentos embebidos (direcciones)</p></div>
+    </div>
+</div>
+
+<div class="filter-row">
+    <div class="search-bar" style="flex:1;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input @bind="busqueda" @bind:event="oninput" @onkeyup="OnKeyUp" class="form-control" placeholder="Buscar por nombre o correo..."/>
+    </div>
+    <button class="btn btn-secondary" @onclick="Buscar">Buscar</button>
+</div>
+
+@if (!string.IsNullOrEmpty(msgGlobal))
+{
+    <div class="alert @(isErr?"alert-error":"alert-success")">@msgGlobal</div>
+}
+
+<div class="card">
+    <div class="card-header"><div class="card-title">@total usuario(s)</div></div>
+    @if (cargando)
+    {
+        <div class="loading-indicator"><div class="spinner"></div>Cargando...</div>
+    }
+    else if (!usuarios.Any())
+    {
+        <div class="empty-state"><h3>Sin usuarios</h3></div>
+    }
+    else
+    {
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Usuario</th><th>Roles</th><th>Registro</th><th>Direcciones</th><th>Acciones</th></tr></thead>
+                <tbody>
+                @foreach (var u in usuarios)
+                {
+                    <tr>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div class="user-avatar" style="flex-shrink:0;">@(u.Nombre.Length>0?u.Nombre[0].ToString().ToUpper():"?")</div>
+                                <div>
+                                    <div style="font-weight:600;">@u.Nombre</div>
+                                    <div style="font-size:0.75rem;color:var(--text-muted);">@u.Email</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="tag-list">
+                                @foreach (var r in u.Roles) { <span class="badge badge-primary">@r</span> }
+                            </div>
+                        </td>
+                        <td style="font-size:0.78rem;color:var(--text-muted);">@u.Registro.ToString("dd/MM/yy")</td>
+                        <td>
+                            <button class="btn btn-ghost btn-sm" @onclick="()=>AbrirDirecciones(u)">
+                                @u.Direcciones.Count dir.
+                            </button>
+                        </td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" @onclick="()=>Eliminar(u.Id!)">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div style="padding:16px;">
+            <div class="pagination">
+                <button class="page-btn" @onclick="()=>CambiarPagina(pagina-1)" disabled="@(pagina==0)">Ant</button>
+                <span class="page-info">Pag @(pagina+1)</span>
+                <button class="page-btn" @onclick="()=>CambiarPagina(pagina+1)" disabled="@(usuarios.Count<limite)">Sig</button>
+            </div>
+        </div>
+    }
+</div>
+
+@if (dirModal)
+{
+    <div class="modal-overlay">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <div class="modal-title">Direcciones de @dirUsuario?.Nombre</div>
+                <button class="modal-close" @onclick="()=>dirModal=false">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                @if (dirUsuario?.Direcciones.Any() == true)
+                {
+                    @foreach (var d in dirUsuario.Direcciones)
+                    {
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg-elevated);border-radius:var(--radius-md);margin-bottom:8px;">
+                            <div>
+                                <div style="font-weight:600;">@d.Alias</div>
+                                <div style="font-size:0.8rem;color:var(--text-secondary);">@d.Nombre - @d.Detalle</div>
+                            </div>
+                            <button class="btn btn-danger btn-sm" @onclick="async()=>await QuitarDireccion(d.Alias)">Quitar</button>
+                        </div>
+                    }
+                } else {
+                    <p style="color:var(--text-muted);text-align:center;padding:16px;">Sin direcciones registradas</p>
+                }
+
+                <hr style="border-color:var(--border-subtle);margin:16px 0;"/>
+                <h4 style="font-size:0.875rem;font-weight:700;margin-bottom:12px;">Agregar Direccion (Documento Embebido)</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Alias</label>
+                        <input @bind="dAlias" class="form-control" placeholder="Casa, Trabajo..."/>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nombre contacto</label>
+                        <input @bind="dNombre" class="form-control"/>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Detalle de direccion</label>
+                    <input @bind="dDetalle" class="form-control" placeholder="Zona 10, Ciudad de Guatemala"/>
+                </div>
+                <button class="btn btn-primary" @onclick="AgregarDireccion" disabled="@guardando" style="width:100%;">
+                    @if (guardando) { <div class="spinner" style="width:14px;height:14px;"></div> }
+                    Agregar Direccion Embebida
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private class DirVm { public string Alias=""; public string Nombre=""; public string Detalle=""; }
+    private class UsuarioVm { public string? Id; public string Nombre=""; public string Email=""; public List<string> Roles=new(); public DateTime Registro; public List<DirVm> Direcciones=new(); }
+
+    private List<UsuarioVm> usuarios = new();
+    private string busqueda="", msgGlobal="";
+    private int pagina=0, limite=15, total=0;
+    private bool cargando, guardando, dirModal, isErr;
+    private UsuarioVm? dirUsuario;
+    private string dAlias="", dNombre="", dDetalle="";
+
+    protected override async Task OnInitializedAsync() => await CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        cargando=true;
+        var r = await Api.GetUsuariosAsync(string.IsNullOrEmpty(busqueda)?null:busqueda, pagina*limite, limite);
+        if (r.HasValue)
+        {
+            total = r.Value.GetProperty("total").GetInt32();
+            usuarios = r.Value.GetProperty("items").EnumerateArray().Select(i => new UsuarioVm
+            {
+                Id = i.TryGetProperty("id", out var id) ? id.GetString() : null,
+                Nombre = i.TryGetProperty("nombre", out var n) ? n.GetString()! : "",
+                Email = i.TryGetProperty("email", out var e) ? e.GetString()! : "",
+                Roles = i.TryGetProperty("roles", out var r2) ? r2.EnumerateArray().Select(e=>e.GetString()!).ToList() : new(),
+                Registro = i.TryGetProperty("fechaRegistro", out var f) ? f.GetDateTime().ToLocalTime() : DateTime.MinValue,
+                Direcciones = i.TryGetProperty("direcciones", out var dirs) ? dirs.EnumerateArray().Select(d => new DirVm
+                {
+                    Alias = d.TryGetProperty("alias", out var a) ? a.GetString()! : "",
+                    Nombre = d.TryGetProperty("nombre", out var dn) ? dn.GetString()! : "",
+                    Detalle = d.TryGetProperty("direccion", out var dd) ? dd.GetString()! : ""
+                }).ToList() : new()
+            }).ToList();
+        }
+        cargando=false;
+    }
+
+    private async Task Buscar() { pagina=0; await CargarAsync(); }
+    private async Task CambiarPagina(int p) { pagina=p; await CargarAsync(); }
+    private async Task OnKeyUp(KeyboardEventArgs e) { if(e.Key=="Enter") await Buscar(); }
+
+    private async Task Eliminar(string id)
+    {
+        var ok = await Api.EliminarUsuarioAsync(id);
+        msgGlobal=ok?"Usuario eliminado.":"Error."; isErr=!ok;
+        if(ok) await CargarAsync();
+    }
+
+    private void AbrirDirecciones(UsuarioVm u) { dirUsuario=u; dAlias=""; dNombre=""; dDetalle=""; dirModal=true; }
+
+    private async Task AgregarDireccion()
+    {
+        if (string.IsNullOrWhiteSpace(dAlias)||dirUsuario==null) return;
+        guardando=true;
+        var ok = await Api.AgregarDireccionAsync(dirUsuario.Id!, new { alias=dAlias, nombre=dNombre, direccion=dDetalle });
+        if (ok) { dirUsuario.Direcciones.Add(new DirVm{Alias=dAlias,Nombre=dNombre,Detalle=dDetalle}); dAlias=""; dNombre=""; dDetalle=""; }
+        guardando=false;
+    }
+
+    private async Task QuitarDireccion(string alias)
+    {
+        if (dirUsuario==null) return;
+        var ok = await Api.QuitarDireccionAsync(dirUsuario.Id!, alias);
+        if (ok) dirUsuario.Direcciones.RemoveAll(d=>d.Alias==alias);
+    }
+}

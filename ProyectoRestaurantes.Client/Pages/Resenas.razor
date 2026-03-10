@@ -1,0 +1,232 @@
+@page "/resenas"
+@inject ApiService Api
+
+<PageTitle>Resenas - RestaurantOS</PageTitle>
+
+<div class="page-header">
+    <div class="page-header-row">
+        <div><h1>Resenas</h1><p>Consulta multi-coleccion: usuarios, restaurantes y pedidos</p></div>
+        <button class="btn btn-primary" @onclick="()=>crearModal=true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nueva Resena
+        </button>
+    </div>
+</div>
+
+<div class="filter-row">
+    <select @bind="restFiltro" class="form-control" style="width:200px;">
+        <option value="">Restaurante: Todos</option>
+        @foreach (var r in restaurantesList) { <option value="@r.Id">@r.Nombre</option> }
+    </select>
+    <select @bind="usuFiltro" class="form-control" style="width:200px;">
+        <option value="">Usuario: Todos</option>
+        @foreach (var u in usuariosList) { <option value="@u.Id">@u.Nombre</option> }
+    </select>
+    <select @bind="calMinFiltro" class="form-control" style="width:130px;">
+        <option value="0">Todas las estrellas</option>
+        <option value="5">5 estrellas</option>
+        <option value="4">4+ estrellas</option>
+        <option value="3">3+ estrellas</option>
+    </select>
+    <button class="btn btn-secondary" @onclick="Buscar">Filtrar</button>
+</div>
+
+@if (!string.IsNullOrEmpty(msgGlobal))
+{
+    <div class="alert @(isErr?"alert-error":"alert-success")">@msgGlobal</div>
+}
+
+<div class="card">
+    <div class="card-header"><div class="card-title">@total resena(s)</div></div>
+    @if (cargando)
+    {
+        <div class="loading-indicator"><div class="spinner"></div>Cargando...</div>
+    }
+    else if (!resenas.Any())
+    {
+        <div class="empty-state"><h3>Sin resenas</h3></div>
+    }
+    else
+    {
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Restaurante</th><th>Cliente</th><th>Calificacion</th><th>Comentario</th><th>Fecha</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var r in resenas)
+                {
+                    <tr>
+                        <td style="font-weight:600;">@r.RestauranteNombre</td>
+                        <td>
+                            <div>@r.UsuarioNombre</div>
+                            <div style="font-size:0.73rem;color:var(--text-muted);">@r.UsuarioEmail</div>
+                        </td>
+                        <td>
+                            <div class="stars">
+                                @for (int i=1;i<=5;i++) {
+                                    <span class="star @(i<=r.Calificacion?"filled":"empty")">&#9733;</span>
+                                }
+                            </div>
+                        </td>
+                        <td style="max-width:220px;font-size:0.85rem;color:var(--text-secondary);">@r.Comentario</td>
+                        <td style="font-size:0.75rem;color:var(--text-muted);">@r.Fecha.ToString("dd/MM/yy")</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" @onclick="()=>Eliminar(r.Id!)">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                            </button>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div style="padding:16px;">
+            <div class="pagination">
+                <button class="page-btn" @onclick="()=>CambiarPagina(pagina-1)" disabled="@(pagina==0)">Ant</button>
+                <span class="page-info">Pag @(pagina+1)</span>
+                <button class="page-btn" @onclick="()=>CambiarPagina(pagina+1)" disabled="@(resenas.Count<limite)">Sig</button>
+            </div>
+        </div>
+    }
+</div>
+
+@if (crearModal)
+{
+    <div class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Nueva Resena</div>
+                <button class="modal-close" @onclick="()=>crearModal=false">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(msgModal))
+                {
+                    <div class="alert @(modalErr?"alert-error":"alert-success")">@msgModal</div>
+                }
+                <div class="form-group">
+                    <label class="form-label">Usuario</label>
+                    <select @bind="fUsuId" class="form-control">
+                        <option value="">Selecciona un usuario...</option>
+                        @foreach (var u in usuariosList) { <option value="@u.Id">@u.Nombre (@u.Email)</option> }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Restaurante</label>
+                    <select @bind="fRestId" class="form-control">
+                        <option value="">Selecciona un restaurante...</option>
+                        @foreach (var r in restaurantesList) { <option value="@r.Id">@r.Nombre</option> }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ID Pedido (referenciado)</label>
+                    <input @bind="fPedidoId" class="form-control" placeholder="ObjectId del pedido"/>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Calificacion</label>
+                    <div class="stars">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            var star = i;
+                            <span class="star @(star<=fCalificacion?"filled":"empty") star-interactive"
+                                  @onclick="()=>fCalificacion=star" style="font-size:28px;cursor:pointer;">&#9733;</span>
+                        }
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Comentario</label>
+                    <textarea @bind="fComentario" class="form-control" placeholder="Escribe tu resena..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="()=>crearModal=false">Cancelar</button>
+                <button class="btn btn-primary" @onclick="Crear" disabled="@guardando">
+                    @if (guardando) { <div class="spinner" style="width:14px;height:14px;"></div> }
+                    Publicar Resena
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private class ResenaVm { public string? Id; public string UsuarioNombre=""; public string UsuarioEmail=""; public string RestauranteNombre=""; public int Calificacion; public string Comentario=""; public DateTime Fecha; }
+
+    private List<ResenaVm> resenas = new();
+    private string restFiltro="", usuFiltro="", msgGlobal="", msgModal="";
+    private int calMinFiltro=0, pagina=0, limite=15, total=0;
+    private bool cargando, guardando, crearModal, modalErr, isErr;
+    private string fUsuId="", fRestId="", fPedidoId="", fComentario=""; private int fCalificacion=5;
+
+    private class DtoSelect { public string Id=""; public string Nombre=""; public string Email=""; }
+    private List<DtoSelect> restaurantesList = new();
+    private List<DtoSelect> usuariosList = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarFiltrosAsync();
+        await CargarAsync();
+    }
+
+    private async Task CargarFiltrosAsync()
+    {
+        var rRest = await Api.GetRestaurantesAsync(skip: 0, limit: 100);
+        if (rRest.HasValue) restaurantesList = rRest.Value.GetProperty("items").EnumerateArray()
+            .Select(i => new DtoSelect { Id=i.GetProperty("id").GetString()!, Nombre=i.GetProperty("nombre").GetString()! }).ToList();
+
+        var rUsu = await Api.GetUsuariosAsync(skip: 0, limit: 100);
+        if (rUsu.HasValue) usuariosList = rUsu.Value.EnumerateArray()
+            .Select(i => new DtoSelect { Id=i.GetProperty("id").GetString()!, Nombre=i.GetProperty("nombre").GetString()!, Email=i.GetProperty("email").GetString()! }).ToList();
+    }
+
+    private async Task CargarAsync()
+    {
+        cargando=true;
+        var r = await Api.GetResenasAsync(
+            string.IsNullOrEmpty(restFiltro)?null:restFiltro,
+            string.IsNullOrEmpty(usuFiltro)?null:usuFiltro,
+            calMinFiltro>0?calMinFiltro:null,
+            pagina*limite, limite);
+
+        if (r.HasValue)
+        {
+            total = r.Value.GetProperty("total").GetInt32();
+            resenas = r.Value.GetProperty("items").EnumerateArray().Select(i =>
+            {
+                var usuario = i.TryGetProperty("usuario", out var u) ? u : default;
+                var restaurante = i.TryGetProperty("restaurante", out var rest) ? rest : default;
+                return new ResenaVm
+                {
+                    Id = i.TryGetProperty("_id", out var id) ? id.GetString() : null,
+                    UsuarioNombre = usuario.ValueKind != System.Text.Json.JsonValueKind.Undefined && usuario.TryGetProperty("nombre", out var un) ? un.GetString()! : "?",
+                    UsuarioEmail = usuario.ValueKind != System.Text.Json.JsonValueKind.Undefined && usuario.TryGetProperty("email", out var ue) ? ue.GetString()! : "",
+                    RestauranteNombre = restaurante.ValueKind != System.Text.Json.JsonValueKind.Undefined && restaurante.TryGetProperty("nombre", out var rn) ? rn.GetString()! : "?",
+                    Calificacion = i.TryGetProperty("calificacion", out var c) ? c.GetInt32() : 0,
+                    Comentario = i.TryGetProperty("comentario", out var com) ? com.GetString()! : "",
+                    Fecha = i.TryGetProperty("fecha", out var f) ? f.GetDateTime().ToLocalTime() : DateTime.MinValue
+                };
+            }).ToList();
+        }
+        cargando=false;
+    }
+
+    private async Task Buscar() { pagina=0; await CargarAsync(); }
+    private async Task CambiarPagina(int p) { pagina=p; await CargarAsync(); }
+
+    private async Task Crear()
+    {
+        if (string.IsNullOrEmpty(fUsuId)||string.IsNullOrEmpty(fRestId)) { msgModal="ID usuario y restaurante son requeridos."; modalErr=true; return; }
+        guardando=true;
+        var ok = await Api.CrearResenaAsync(new { usuarioId=fUsuId, restauranteId=fRestId, pedidoId=fPedidoId, calificacion=fCalificacion, comentario=fComentario });
+        if (ok) { crearModal=false; msgGlobal="Resena publicada y rating actualizado."; isErr=false; await CargarAsync(); }
+        else { msgModal="Error al publicar."; modalErr=true; }
+        guardando=false;
+    }
+
+    private async Task Eliminar(string id)
+    {
+        var ok = await Api.EliminarResenaAsync(id);
+        msgGlobal=ok?"Resena eliminada.":"Error."; isErr=!ok;
+        if(ok) await CargarAsync();
+    }
+}

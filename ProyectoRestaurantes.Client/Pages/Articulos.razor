@@ -1,0 +1,335 @@
+@page "/articulos"
+@inject ApiService Api
+
+<PageTitle>Articulos - RestaurantOS</PageTitle>
+
+<div class="page-header">
+    <div class="page-header-row">
+        <div><h1>Articulos del Menu</h1><p>Gestion de platillos, ingredientes y categorias</p></div>
+        <button class="btn btn-primary" @onclick='()=>AbrirModal(null)'>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo Articulo
+        </button>
+    </div>
+</div>
+
+<div class="filter-row">
+    <div class="search-bar" style="flex:1;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input @bind="busqueda" @bind:event="oninput" @onkeyup="OnKeyUp" class="form-control" placeholder="Buscar articulo..."/>
+    </div>
+    <select @bind="restFiltro" class="form-control" style="width:200px;">
+        <option value="">Todos los restaurantes</option>
+        @foreach (var r in restaurantesList)
+        {
+            <option value="@r.Id">@r.Nombre</option>
+        }
+    </select>
+    <select @bind="dispFiltro" class="form-control" style="width:140px;">
+        <option value="">Todos</option>
+        <option value="true">Disponibles</option>
+        <option value="false">No disponibles</option>
+    </select>
+    <button class="btn btn-secondary" @onclick="Buscar">Filtrar</button>
+</div>
+
+@if (!string.IsNullOrEmpty(msgGlobal))
+{
+    <div class="alert @(isErr?"alert-error":"alert-success")">@msgGlobal</div>
+}
+
+<div class="card">
+    <div class="card-header"><div class="card-title">@total articulo(s) encontrados</div></div>
+    @if (cargando)
+    {
+        <div class="loading-indicator"><div class="spinner"></div>Cargando...</div>
+    }
+    else if (!items.Any())
+    {
+        <div class="empty-state"><h3>Sin articulos</h3><p>Crea el primero con el boton de arriba</p></div>
+    }
+    else
+    {
+        <div class="table-wrapper">
+            <table>
+                <thead><tr><th>Nombre</th><th>Precio</th><th>Stock</th><th>Disponible</th><th>Categorias</th><th>Acciones</th></tr></thead>
+                <tbody>
+                @foreach (var a in items)
+                {
+                    <tr>
+                        <td>
+                            <div style="font-weight:600;">@a.Nombre</div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);">@a.Descripcion</div>
+                        </td>
+                        <td style="font-weight:700;color:var(--accent-primary);">Q@a.Precio.ToString("0.00")</td>
+                        <td><span class="badge @(a.Stock>10?"badge-success":a.Stock>0?"badge-warning":"badge-danger")">@a.Stock</span></td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span class="status-dot @(a.Disponible?"active":"inactive")"></span>
+                                @(a.Disponible?"Si":"No")
+                            </div>
+                        </td>
+                        <td>
+                            <div class="tag-list">
+                                @foreach (var c in a.Categorias) { <span class="tag">@c</span> }
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:6px;">
+                                <button class="btn btn-ghost btn-sm" @onclick="()=>AbrirModal(a)" title="Editar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                                <button class="btn btn-ghost btn-sm" @onclick="()=>AbrirArrayModal(a)" title="Ingredientes y Categorias">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                                </button>
+                                <button class="btn btn-danger btn-sm" @onclick="()=>Eliminar(a.Id!)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div style="padding:16px;">
+            <div class="pagination">
+                <button class="page-btn" @onclick="()=>CambiarPagina(pagina-1)" disabled="@(pagina==0)">Ant</button>
+                <span class="page-info">Pagina @(pagina+1) de @totalPaginas</span>
+                <button class="page-btn" @onclick="()=>CambiarPagina(pagina+1)" disabled="@(pagina>=totalPaginas-1)">Sig</button>
+            </div>
+        </div>
+    }
+</div>
+
+@if (modalVisible)
+{
+    <div class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">@(editId==null?"Nuevo Articulo":"Editar Articulo")</div>
+                <button class="modal-close" @onclick="CerrarModal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(msgModal))
+                {
+                    <div class="alert @(modalErr?"alert-error":"alert-success")">@msgModal</div>
+                }
+                <div class="form-group">
+                    <label class="form-label">Restaurante</label>
+                    <select @bind="fRestId" class="form-control">
+                        <option value="">Selecciona un restaurante...</option>
+                        @foreach (var r in restaurantesList)
+                        {
+                            <option value="@r.Id">@r.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Nombre</label>
+                        <input @bind="fNombre" class="form-control"/>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Precio</label>
+                        <input @bind="fPrecio" class="form-control" type="number" step="0.01"/>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Descripcion</label>
+                    <textarea @bind="fDesc" class="form-control" placeholder="Describe el platillo..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Stock</label>
+                        <input @bind="fStock" class="form-control" type="number"/>
+                    </div>
+                    <div class="form-group" style="display:flex;align-items:flex-end;">
+                        <label class="form-label" style="display:flex;align-items:center;gap:8px;padding-bottom:10px;">
+                            <input type="checkbox" @bind="fDisponible"/> Disponible
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CerrarModal">Cancelar</button>
+                <button class="btn btn-primary" @onclick="Guardar" disabled="@guardando">
+                    @if (guardando) { <div class="spinner" style="width:14px;height:14px;"></div> }
+                    @(editId==null?"Crear":"Actualizar")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (arrayModalVisible)
+{
+    <div class="modal-overlay">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <div class="modal-title">Ingredientes y Categorias - @arrayItem?.Nombre</div>
+                <button class="modal-close" @onclick="()=>arrayModalVisible=false">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+                <div>
+                    <h3 style="font-size:0.9rem;font-weight:700;margin-bottom:12px;">Ingredientes</h3>
+                    <div class="tag-list" style="margin-bottom:12px;">
+                        @foreach (var ing in arrayItem?.Ingredientes ?? new())
+                        {
+                            <span class="tag">@ing
+                                <button class="tag-remove" @onclick="async()=>await QuitarIngrediente(ing)">x</button>
+                            </span>
+                        }
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <input @bind="nuevoIngrediente" class="form-control" placeholder="Nuevo ingrediente" @onkeyup="OnKeyUpIngrediente"/>
+                        <button class="btn btn-secondary" @onclick="AgregarIngrediente">+</button>
+                    </div>
+                </div>
+                <div>
+                    <h3 style="font-size:0.9rem;font-weight:700;margin-bottom:12px;">Categorias</h3>
+                    <div class="tag-list" style="margin-bottom:12px;">
+                        @foreach (var cat in arrayItem?.Categorias ?? new())
+                        {
+                            <span class="tag" style="border-color:rgba(99,102,241,0.3);color:var(--accent-primary);">@cat
+                                <button class="tag-remove" @onclick="async()=>await QuitarCategoria(cat)">x</button>
+                            </span>
+                        }
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <input @bind="nuevaCategoria" class="form-control" placeholder="Nueva categoria" @onkeyup="OnKeyUpCategoria"/>
+                        <button class="btn btn-secondary" @onclick="AgregarCategoria">+</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" @onclick="()=>arrayModalVisible=false">Listo</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private class ArticuloVm { public string? Id; public string RestauranteId=""; public string Nombre=""; public string Descripcion=""; public double Precio; public int Stock; public bool Disponible=true; public List<string> Ingredientes=new(); public List<string> Categorias=new(); }
+
+    private List<ArticuloVm> items = new();
+    private string busqueda="", restFiltro="", dispFiltro="";
+    private int pagina=0, limite=15, total=0;
+    private int totalPaginas => (int)Math.Ceiling((double)total/limite);
+    private bool cargando, guardando, modalVisible, arrayModalVisible, modalErr, isErr;
+    private string msgGlobal="", msgModal="", editId="";
+    private string fRestId="", fNombre="", fDesc=""; private double fPrecio; private int fStock=10; private bool fDisponible=true;
+    private ArticuloVm? arrayItem; private string nuevoIngrediente="", nuevaCategoria="";
+
+    private class RestauranteSelectVm { public string Id=""; public string Nombre=""; }
+    private List<RestauranteSelectVm> restaurantesList = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarFiltrosAsync();
+        await CargarAsync();
+    }
+
+    private async Task CargarFiltrosAsync()
+    {
+        var r = await Api.GetRestaurantesAsync(skip: 0, limit: 100);
+        if (r.HasValue)
+        {
+            restaurantesList = r.Value.GetProperty("items").EnumerateArray().Select(i => new RestauranteSelectVm {
+                Id = i.TryGetProperty("id", out var id) ? id.GetString()! : "",
+                Nombre = i.TryGetProperty("nombre", out var n) ? n.GetString()! : ""
+            }).ToList();
+        }
+    }
+
+    private async Task CargarAsync()
+    {
+        cargando = true;
+        bool? disp = dispFiltro=="true"?true:dispFiltro=="false"?false:null;
+        var r = await Api.GetArticulosAsync(string.IsNullOrEmpty(restFiltro)?null:restFiltro, busqueda, disp, pagina*limite, limite);
+        if (r.HasValue)
+        {
+            total = r.Value.GetProperty("total").GetInt32();
+            items = r.Value.GetProperty("items").EnumerateArray().Select(i => new ArticuloVm
+            {
+                Id = i.TryGetProperty("id", out var id) ? id.GetString() : null,
+                RestauranteId = i.TryGetProperty("restauranteId", out var rid) ? rid.GetString()! : "",
+                Nombre = i.TryGetProperty("nombre", out var n) ? n.GetString()! : "",
+                Descripcion = i.TryGetProperty("descripcion", out var d) ? d.GetString()! : "",
+                Precio = i.TryGetProperty("precio", out var p) ? p.GetDouble() : 0,
+                Stock = i.TryGetProperty("stock", out var s) ? s.GetInt32() : 0,
+                Disponible = i.TryGetProperty("disponible", out var disp2) && disp2.GetBoolean(),
+                Ingredientes = i.TryGetProperty("ingredientes", out var ing) ? ing.EnumerateArray().Select(e=>e.GetString()!).ToList() : new(),
+                Categorias = i.TryGetProperty("categorias", out var cat) ? cat.EnumerateArray().Select(e=>e.GetString()!).ToList() : new()
+            }).ToList();
+        }
+        cargando = false;
+    }
+
+    private async Task Buscar() { pagina=0; await CargarAsync(); }
+    private async Task CambiarPagina(int p) { pagina=p; await CargarAsync(); }
+    private async Task OnKeyUp(KeyboardEventArgs e) { if(e.Key=="Enter") await Buscar(); }
+    private async Task OnKeyUpIngrediente(KeyboardEventArgs e) { if(e.Key=="Enter") await AgregarIngrediente(); }
+    private async Task OnKeyUpCategoria(KeyboardEventArgs e) { if(e.Key=="Enter") await AgregarCategoria(); }
+
+    private void AbrirModal(ArticuloVm? a)
+    {
+        editId = a?.Id ?? null!;
+        fRestId=a?.RestauranteId??""; fNombre=a?.Nombre??""; fDesc=a?.Descripcion??"";
+        fPrecio=a?.Precio??0; fStock=a?.Stock??10; fDisponible=a?.Disponible??true;
+        msgModal=""; modalVisible=true;
+    }
+    private void CerrarModal() => modalVisible=false;
+
+    private async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(fNombre)) { msgModal="Nombre requerido."; modalErr=true; return; }
+        guardando=true;
+        var payload = new { restauranteId=fRestId, nombre=fNombre, descripcion=fDesc, precio=fPrecio, stock=fStock, disponible=fDisponible, ingredientes=Array.Empty<string>(), categorias=Array.Empty<string>() };
+        bool ok = editId==null ? await Api.CrearArticuloAsync(payload) : await Api.ActualizarArticuloAsync(editId, payload);
+        if (ok) { modalVisible=false; await CargarAsync(); msgGlobal=editId==null?"Articulo creado.":"Articulo actualizado."; isErr=false; }
+        else { msgModal="Error al guardar."; modalErr=true; }
+        guardando=false;
+    }
+
+    private async Task Eliminar(string id)
+    {
+        var ok = await Api.EliminarArticuloAsync(id);
+        msgGlobal=ok?"Articulo eliminado.":"Error al eliminar."; isErr=!ok;
+        if(ok) await CargarAsync();
+    }
+
+    private void AbrirArrayModal(ArticuloVm a) { arrayItem=a; nuevoIngrediente=""; nuevaCategoria=""; arrayModalVisible=true; }
+
+    private async Task AgregarIngrediente()
+    {
+        if (string.IsNullOrWhiteSpace(nuevoIngrediente)||arrayItem==null) return;
+        var ok = await Api.AgregarIngredienteAsync(arrayItem.Id!, nuevoIngrediente.Trim());
+        if (ok) { arrayItem.Ingredientes.Add(nuevoIngrediente.Trim()); nuevoIngrediente=""; }
+    }
+
+    private async Task QuitarIngrediente(string ing)
+    {
+        if (arrayItem==null) return;
+        var ok = await Api.QuitarIngredienteAsync(arrayItem.Id!, ing);
+        if (ok) arrayItem.Ingredientes.Remove(ing);
+    }
+
+    private async Task AgregarCategoria()
+    {
+        if (string.IsNullOrWhiteSpace(nuevaCategoria)||arrayItem==null) return;
+        var ok = await Api.AgregarCategoriaArticuloAsync(arrayItem.Id!, nuevaCategoria.Trim());
+        if (ok) { arrayItem.Categorias.Add(nuevaCategoria.Trim()); nuevaCategoria=""; }
+    }
+
+    private async Task QuitarCategoria(string cat)
+    {
+        if (arrayItem==null) return;
+        var ok = await Api.QuitarCategoriaArticuloAsync(arrayItem.Id!, cat);
+        if (ok) arrayItem.Categorias.Remove(cat);
+    }
+}

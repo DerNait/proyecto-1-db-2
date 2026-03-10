@@ -1,0 +1,182 @@
+@page "/archivos"
+@inject ApiService Api
+@inject IJSRuntime JS
+@using Microsoft.AspNetCore.Components.Forms
+
+<PageTitle>Archivos GridFS - RestaurantOS</PageTitle>
+
+<div class="page-header">
+    <div class="page-header-row">
+        <div><h1>Archivos GridFS</h1><p>Gestion de archivos almacenados en MongoDB GridFS</p></div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(msgGlobal))
+{
+    <div class="alert @(isErr?"alert-error":"alert-success")">@msgGlobal</div>
+}
+
+<div style="display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start;">
+    <div class="card">
+        <div class="card-header"><div class="card-title">Archivos almacenados (@archivos.Count)</div></div>
+        @if (cargando)
+        {
+            <div class="loading-indicator"><div class="spinner"></div>Cargando...</div>
+        }
+        else if (!archivos.Any())
+        {
+            <div class="empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <h3>Sin archivos</h3>
+                <p>Sube el primer archivo usando el panel de la derecha</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Nombre</th><th>Tipo</th><th>Tamano</th><th>Subido</th><th>Acciones</th></tr></thead>
+                    <tbody>
+                    @foreach (var a in archivos)
+                    {
+                        <tr>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div style="width:32px;height:32px;background:var(--bg-elevated);border-radius:var(--radius-sm);display:grid;place-items:center;flex-shrink:0;">
+                                        @GetFileIcon(a.ContentType)
+                                    </div>
+                                    <span style="font-size:0.85rem;font-weight:500;word-break:break-all;">@a.Nombre</span>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-muted">@a.ContentType.Split('/').Last()</span></td>
+                            <td style="font-size:0.8rem;color:var(--text-muted);">@FormatBytes(a.TamanioBytes)</td>
+                            <td style="font-size:0.75rem;color:var(--text-muted);">@a.FechaSubida.ToString("dd/MM/yy HH:mm")</td>
+                            <td>
+                                <div style="display:flex;gap:6px;">
+                                    <a class="btn btn-ghost btn-sm" href="@Api.GetDownloadUrl(a.Id)" target="_blank" title="Descargar">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    </a>
+                                    <button class="btn btn-danger btn-sm" @onclick="()=>Eliminar(a.Id)" title="Eliminar">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="card">
+        <div class="card-header"><div class="card-title">Subir Archivo</div></div>
+        <div class="card-body">
+            <InputFile OnChange="OnFileChange" class="form-control" style="margin-bottom:12px;" accept="image/*,application/pdf,.csv,.json,.txt" multiple/>
+            @if (archivosSeleccionados.Any())
+            {
+                <div style="margin-bottom:12px;">
+                    @foreach (var f in archivosSeleccionados)
+                    {
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg-elevated);border-radius:var(--radius-md);margin-bottom:6px;font-size:0.82rem;">
+                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">@f.Name</span>
+                            <span style="color:var(--text-muted);margin-left:8px;flex-shrink:0;">@FormatBytes(f.Size)</span>
+                        </div>
+                    }
+                </div>
+                @if (subiendo)
+                {
+                    <div style="margin-bottom:10px;">
+                        <div class="progress"><div class="progress-fill" style="width:@(progreso.ToString("0"))%"></div></div>
+                        <p style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Subiendo @progresoIdx de @archivosSeleccionados.Count...</p>
+                    </div>
+                }
+                <button class="btn btn-primary" @onclick="SubirArchivos" disabled="@subiendo" style="width:100%;">
+                    @if (subiendo) { <div class="spinner" style="width:14px;height:14px;"></div> }
+                    Subir @archivosSeleccionados.Count archivo(s) a GridFS
+                </button>
+            }
+            else
+            {
+                <p style="font-size:0.82rem;color:var(--text-muted);text-align:center;">Selecciona uno o varios archivos</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private class ArchivoVm { public string Id=""; public string Nombre=""; public long TamanioBytes; public DateTime FechaSubida; public string ContentType=""; }
+
+    private List<ArchivoVm> archivos = new();
+    private List<IBrowserFile> archivosSeleccionados = new();
+    private bool cargando, subiendo, isErr;
+    private string msgGlobal = "";
+    private double progreso; private int progresoIdx;
+
+    protected override async Task OnInitializedAsync() => await CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        cargando=true;
+        var r = await Api.GetArchivosAsync(0, 100);
+        if (r.HasValue)
+        {
+            archivos = r.Value.EnumerateArray().Select(a => new ArchivoVm
+            {
+                Id = a.TryGetProperty("id", out var id) ? id.GetString()! : "",
+                Nombre = a.TryGetProperty("nombre", out var n) ? n.GetString()! : "",
+                TamanioBytes = a.TryGetProperty("tamanioBytes", out var t) ? t.GetInt64() : 0,
+                FechaSubida = a.TryGetProperty("fechaSubida", out var f) ? f.GetDateTime().ToLocalTime() : DateTime.MinValue,
+                ContentType = a.TryGetProperty("contentType", out var ct) ? ct.GetString()! : "application/octet-stream"
+            }).ToList();
+        }
+        cargando=false;
+    }
+
+    private void OnFileChange(InputFileChangeEventArgs e) => archivosSeleccionados = e.GetMultipleFiles(20).ToList();
+
+    private async Task SubirArchivos()
+    {
+        subiendo=true; msgGlobal=""; progresoIdx=0;
+        int subidos=0;
+        foreach (var f in archivosSeleccionados)
+        {
+            progresoIdx++;
+            progreso = (double)progresoIdx / archivosSeleccionados.Count * 100;
+            using var stream = f.OpenReadStream(maxAllowedSize: 50*1024*1024);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var (ok, _, _) = await Api.SubirArchivoAsync(ms.ToArray(), f.Name, f.ContentType);
+            if (ok) subidos++;
+            StateHasChanged();
+        }
+        msgGlobal=$"{subidos} de {archivosSeleccionados.Count} archivo(s) subidos exitosamente.";
+        isErr = subidos == 0;
+        archivosSeleccionados.Clear(); progreso=0;
+        await CargarAsync();
+        subiendo=false;
+    }
+
+    private async Task Eliminar(string id)
+    {
+        var ok = await Api.EliminarArchivoAsync(id);
+        msgGlobal=ok?"Archivo eliminado de GridFS.":"Error al eliminar."; isErr=!ok;
+        if(ok) archivos.RemoveAll(a=>a.Id==id);
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:0.0} KB";
+        return $"{bytes / 1024.0 / 1024.0:0.1} MB";
+    }
+
+    private static string GetFileIcon(string contentType)
+    {
+        if (contentType.StartsWith("image")) return "Img";
+        if (contentType.Contains("pdf")) return "PDF";
+        if (contentType.Contains("csv")) return "CSV";
+        if (contentType.Contains("json")) return "JSON";
+        return "File";
+    }
+}
