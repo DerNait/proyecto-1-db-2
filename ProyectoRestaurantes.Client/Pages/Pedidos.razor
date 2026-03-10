@@ -124,12 +124,12 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Latitud entrega</label>
-                        <input @bind="pLat" class="form-control" type="number" step="0.0001"/>
+                        <label class="form-label">Latitud</label>
+                        <input @bind="pLat" class="form-control" type="number" step="0.0001" placeholder="Ej: 14.6349"/>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Longitud entrega</label>
-                        <input @bind="pLon" class="form-control" type="number" step="0.0001"/>
+                        <label class="form-label">Longitud</label>
+                        <input @bind="pLon" class="form-control" type="number" step="0.0001" placeholder="Ej: -90.5069"/>
                     </div>
                 </div>
                 <div class="form-group">
@@ -137,9 +137,9 @@
                     @foreach (var item in pItems)
                     {
                         <div class="cart-item">
-                            <select @bind="item.ArticuloId" class="form-control" style="flex:1;">
+                            <select @bind="item.ArticuloId" class="form-control" style="flex:1;" disabled="@string.IsNullOrEmpty(pRestId)">
                                 <option value="">Selecciona articulo...</option>
-                                @foreach (var a in articulosList) { <option value="@a.Id">@a.Nombre (Q@a.Precio)</option> }
+                                @foreach (var a in articulosList.Where(x => x.RestauranteId == pRestId)) { <option value="@a.Id">@a.Nombre (Q@(a.Precio.ToString("0.00")))</option> }
                             </select>
                             <div class="cart-item-qty">
                                 <button class="qty-btn" @onclick="()=>{if(item.Cantidad>1)item.Cantidad--;}">-</button>
@@ -171,10 +171,10 @@
     private string estadoFiltro="", restFiltro="", msgGlobal="", msgModal="";
     private int pagina=0, limite=15, total=0;
     private bool cargando, guardando, crearModal, modalErr, isErr;
-    private string pUsuId="", pRestId=""; private double pLat, pLon;
+    private string pUsuId="", pRestId=""; private double? pLat = 14.6349; private double? pLon = -90.5069;
     private List<ItemInput> pItems = new() { new() };
 
-    private class DtoSelect { public string Id=""; public string Nombre=""; public string Email=""; public double Precio=0; }
+    private class DtoSelect { public string Id=""; public string Nombre=""; public string Email=""; public double Precio=0; public string RestauranteId=""; }
     private List<DtoSelect> restaurantesList = new();
     private List<DtoSelect> usuariosList = new();
     private List<DtoSelect> articulosList = new();
@@ -197,7 +197,12 @@
 
         var rArt = await Api.GetArticulosAsync(disponible: true, skip: 0, limit: 500);
         if (rArt.HasValue) articulosList = rArt.Value.GetProperty("items").EnumerateArray()
-            .Select(i => new DtoSelect { Id=i.GetProperty("id").GetString()!, Nombre=i.GetProperty("nombre").GetString()!, Precio=i.GetProperty("precio").GetDouble() }).ToList();
+            .Select(i => new DtoSelect { 
+                Id=i.GetProperty("id").GetString()!, 
+                Nombre=i.GetProperty("nombre").GetString()!, 
+                Precio=i.GetProperty("precio").GetDouble(),
+                RestauranteId=i.TryGetProperty("restauranteId", out var rest) ? rest.GetString()! : ""
+            }).ToList();
     }
 
     private async Task CargarAsync()
@@ -237,16 +242,27 @@
 
     private async Task CrearPedido()
     {
-        if (!pItems.Any()||string.IsNullOrEmpty(pUsuId)||string.IsNullOrEmpty(pRestId))
+        if (!pItems.Any(i => !string.IsNullOrEmpty(i.ArticuloId)) || string.IsNullOrEmpty(pUsuId) || string.IsNullOrEmpty(pRestId) || !pLat.HasValue || !pLon.HasValue)
         { msgModal="Completa todos los campos."; modalErr=true; return; }
+
         guardando=true; msgModal="";
         var payload = new {
-            usuarioId=pUsuId, restauranteId=pRestId,
-            items=pItems.Where(i=>!string.IsNullOrEmpty(i.ArticuloId)).Select(i=>new{articuloId=i.ArticuloId,cantidad=i.Cantidad}).ToArray(),
-            ubicacionEntrega=new{type="Point",coordinates=new[]{pLon,pLat}}
+            usuarioId=pUsuId, restauranteId=pRestId, estado="RECIBIDO",
+            items=pItems.Where(i=>!string.IsNullOrEmpty(i.ArticuloId)).Select(i=>{
+                var a = articulosList.FirstOrDefault(x => x.Id == i.ArticuloId);
+                var precio = a?.Precio ?? 0;
+                return new {
+                    articuloId = i.ArticuloId,
+                    nombreCopia = a?.Nombre ?? "Articulo Eliminado",
+                    precioUnitario = precio,
+                    cantidad = i.Cantidad,
+                    subtotal = precio * i.Cantidad
+                };
+            }).ToArray(),
+            ubicacionEntrega=new{type="Point",coordinates=new[]{pLon.Value, pLat.Value}}
         };
         var (ok, msg) = await Api.CrearPedidoAsync(payload);
-        if (ok) { crearModal=false; msgGlobal="Pedido creado con transaccion ACID exitosa."; isErr=false; pItems=new(){new()}; await CargarAsync(); }
+        if (ok) { crearModal=false; msgGlobal="Pedido creado."; isErr=false; pItems=new(){new()}; pLat = 14.6349; pLon = -90.5069; await CargarAsync(); }
         else { msgModal=$"Error: {msg}"; modalErr=true; }
         guardando=false;
     }
