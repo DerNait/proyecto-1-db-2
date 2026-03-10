@@ -16,13 +16,20 @@ public class IndexInitializationService
     {
         Console.WriteLine("=== Inicializando índices de MongoDB ===");
 
-        await CrearIndicesUsuariosAsync();
-        await CrearIndicesPedidosAsync();
-        await CrearIndicesRestaurantesAsync();
-        await CrearIndicesArticulosAsync();
-        await CrearIndicesResenasAsync();
+        try
+        {
+            await CrearIndicesUsuariosAsync();
+            await CrearIndicesPedidosAsync();
+            await CrearIndicesRestaurantesAsync();
+            await CrearIndicesArticulosAsync();
+            await CrearIndicesResenasAsync();
 
-        Console.WriteLine("=== Índices creados exitosamente ===");
+            Console.WriteLine("=== Índices creados exitosamente ===");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"! Error al crear índices (es posible que ya existan con distintas opciones): {ex.Message}");
+        }
     }
 
     private async Task CrearIndicesUsuariosAsync()

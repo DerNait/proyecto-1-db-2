@@ -84,8 +84,9 @@ public class SeedController : ControllerBase
                 {
                     new Direccion
                     {
+                        Alias = "Principal",
                         Nombre = "Casa",
-                        Direccion1 = $"Zona {random.Next(1, 22)}, Guatemala",
+                        DetalleDireccion = $"Zona {random.Next(1, 22)}, Guatemala",
                         Ubicacion = new Ubicacion
                         {
                             Type = "Point",

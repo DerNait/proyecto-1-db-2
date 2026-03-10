@@ -1,0 +1,8 @@
+﻿C:\Users\anna2\Desktop\proyecto-1-db-2\ProyectoRestaurantes.Api\Services\ResenaService.cs(72,67): error CS0122: 'AggregateFluent<TInput, TResult>' no es accesible debido a su nivel de protecci├│n [C:\Users\anna2\Desktop\proyecto-1-db-2\ProyectoRestaurantes.Api\ProyectoRestaurantes.Api.csproj]
+C:\Users\anna2\Desktop\proyecto-1-db-2\ProyectoRestaurantes.Api\Controllers\SeedController.cs(88,25): error CS0117: 'Direccion' no contiene una definici├│n para 'Direccion1' [C:\Users\anna2\Desktop\proyecto-1-db-2\ProyectoRestaurantes.Api\ProyectoRestaurantes.Api.csproj]
+
+ERROR al compilar.
+    1 Advertencia(s)
+    2 Errores
+
+Tiempo transcurrido 00:00:00.74

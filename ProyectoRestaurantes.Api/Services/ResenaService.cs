@@ -69,11 +69,8 @@ public class ResenaService
                 })
             };
 
-            var resultado = await _resenas.Aggregate(session, new AggregateFluent<Resena, BsonDocument>(
-                _resenas,
-                PipelineDefinition<Resena, BsonDocument>.Create(pipeline),
-                new AggregateOptions()
-            )).FirstOrDefaultAsync();
+            var pipelineDef = PipelineDefinition<Resena, BsonDocument>.Create(pipeline);
+            var resultado = await _resenas.Aggregate(session, pipelineDef).FirstOrDefaultAsync();
 
             var promedio = resultado != null ? resultado["promedio"].AsDouble : 0;
 
