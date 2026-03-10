@@ -1,5 +1,6 @@
 @page "/restaurantes"
 @inject ApiService Api
+@inject AppState State
 
 <PageTitle>Restaurantes - RestaurantOS</PageTitle>
 
@@ -138,18 +139,14 @@
                         <input @bind="fCategoria" class="form-control" placeholder="Ej: Mexicana, Italiana..."/>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">ID del Dueno</label>
-                    <input @bind="fDuenoId" class="form-control" placeholder="ObjectId del usuario dueno"/>
-                </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Latitud</label>
-                        <input @bind="fLat" class="form-control" type="number" step="0.0001"/>
+                        <input @bind="fLat" class="form-control" type="number" step="0.0001" placeholder="Ej: 14.6349"/>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Longitud</label>
-                        <input @bind="fLon" class="form-control" type="number" step="0.0001"/>
+                        <input @bind="fLon" class="form-control" type="number" step="0.0001" placeholder="Ej: -90.5069"/>
                     </div>
                 </div>
                 <div class="form-group">
@@ -209,7 +206,7 @@
                 Nombre = i.TryGetProperty("nome", out _) ? "" : (i.TryGetProperty("nombre", out var n) ? n.GetString()! : ""),
                 Categoria = i.TryGetProperty("categoria", out var cat) ? cat.GetString()! : "",
                 DuenoId = i.TryGetProperty("duenoId", out var d) ? d.GetString()! : "",
-                RatingPromedio = i.TryGetProperty("ratingPromedio", out var rp) ? rp.GetDouble() : 0,
+                RatingPromedio = i.TryGetProperty("rating_promedio", out var rp) || i.TryGetProperty("ratingPromedio", out rp) ? rp.GetDouble() : 0,
                 Activo = i.TryGetProperty("activo", out var a) ? a.GetBoolean() : false,
             }).ToList();
         }
@@ -225,8 +222,9 @@
         msgModal = ""; editId = r?.Id ?? null!;
         fNombre = r?.Nombre ?? "";
         fCategoria = r?.Categoria ?? "";
-        fDuenoId = r?.DuenoId ?? "";
-        fLat = r?.Lat ?? 0; fLon = r?.Lon ?? 0;
+        fDuenoId = r?.DuenoId ?? State.UsuarioId;
+        fLat = r == null || r.Lat == 0 ? 14.6349 : r.Lat; 
+        fLon = r == null || r.Lon == 0 ? -90.5069 : r.Lon;
         fActivo = r?.Activo ?? true;
         modalVisible = true;
     }

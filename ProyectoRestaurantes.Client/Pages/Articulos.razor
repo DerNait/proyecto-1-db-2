@@ -52,7 +52,7 @@
     {
         <div class="table-wrapper">
             <table>
-                <thead><tr><th>Nombre</th><th>Precio</th><th>Stock</th><th>Disponible</th><th>Categorias</th><th>Acciones</th></tr></thead>
+                <thead><tr><th>Nombre</th><th>Restaurante</th><th>Precio</th><th>Stock</th><th>Disponible</th><th>Categorias</th><th>Acciones</th></tr></thead>
                 <tbody>
                 @foreach (var a in items)
                 {
@@ -61,7 +61,10 @@
                             <div style="font-weight:600;">@a.Nombre</div>
                             <div style="font-size:0.75rem;color:var(--text-muted);">@a.Descripcion</div>
                         </td>
-                        <td style="font-weight:700;color:var(--accent-primary);">Q@a.Precio.ToString("0.00")</td>
+                        <td>
+                            <div style="font-size:0.85rem;font-weight:600;color:var(--text-secondary);">@a.RestauranteNombre</div>
+                        </td>
+                        <td style="font-weight:700;color:var(--accent-primary);">Q@(a.Precio.ToString("0.00"))</td>
                         <td><span class="badge @(a.Stock>10?"badge-success":a.Stock>0?"badge-warning":"badge-danger")">@a.Stock</span></td>
                         <td>
                             <div style="display:flex;align-items:center;gap:6px;">
@@ -214,7 +217,7 @@
 }
 
 @code {
-    private class ArticuloVm { public string? Id; public string RestauranteId=""; public string Nombre=""; public string Descripcion=""; public double Precio; public int Stock; public bool Disponible=true; public List<string> Ingredientes=new(); public List<string> Categorias=new(); }
+    private class ArticuloVm { public string? Id; public string RestauranteId=""; public string RestauranteNombre=""; public string Nombre=""; public string Descripcion=""; public double Precio; public int Stock; public bool Disponible=true; public List<string> Ingredientes=new(); public List<string> Categorias=new(); }
 
     private List<ArticuloVm> items = new();
     private string busqueda="", restFiltro="", dispFiltro="";
@@ -254,17 +257,24 @@
         if (r.HasValue)
         {
             total = r.Value.GetProperty("total").GetInt32();
-            items = r.Value.GetProperty("items").EnumerateArray().Select(i => new ArticuloVm
+            items = r.Value.GetProperty("items").EnumerateArray().Select(i =>
             {
-                Id = i.TryGetProperty("id", out var id) ? id.GetString() : null,
-                RestauranteId = i.TryGetProperty("restauranteId", out var rid) ? rid.GetString()! : "",
-                Nombre = i.TryGetProperty("nombre", out var n) ? n.GetString()! : "",
-                Descripcion = i.TryGetProperty("descripcion", out var d) ? d.GetString()! : "",
-                Precio = i.TryGetProperty("precio", out var p) ? p.GetDouble() : 0,
-                Stock = i.TryGetProperty("stock", out var s) ? s.GetInt32() : 0,
-                Disponible = i.TryGetProperty("disponible", out var disp2) && disp2.GetBoolean(),
-                Ingredientes = i.TryGetProperty("ingredientes", out var ing) ? ing.EnumerateArray().Select(e=>e.GetString()!).ToList() : new(),
-                Categorias = i.TryGetProperty("categorias", out var cat) ? cat.EnumerateArray().Select(e=>e.GetString()!).ToList() : new()
+                var rid = i.TryGetProperty("restauranteId", out var restId) ? restId.GetString()! : "";
+                var rNombre = restaurantesList.FirstOrDefault(x => x.Id == rid)?.Nombre ?? "Desconocido";
+
+                return new ArticuloVm
+                {
+                    Id = i.TryGetProperty("id", out var id) ? id.GetString() : null,
+                    RestauranteId = rid,
+                    RestauranteNombre = rNombre,
+                    Nombre = i.TryGetProperty("nombre", out var n) ? n.GetString()! : "",
+                    Descripcion = i.TryGetProperty("descripcion", out var d) ? d.GetString()! : "",
+                    Precio = i.TryGetProperty("precio", out var p) ? p.GetDouble() : 0,
+                    Stock = i.TryGetProperty("stock", out var s) ? s.GetInt32() : 0,
+                    Disponible = i.TryGetProperty("disponible", out var disp2) && disp2.GetBoolean(),
+                    Ingredientes = i.TryGetProperty("ingredientes", out var ing) && ing.ValueKind == System.Text.Json.JsonValueKind.Array ? ing.EnumerateArray().Select(e => e.GetString()!).ToList() : new(),
+                    Categorias = i.TryGetProperty("categorias", out var cat) && cat.ValueKind == System.Text.Json.JsonValueKind.Array ? cat.EnumerateArray().Select(e => e.GetString()!).ToList() : new()
+                };
             }).ToList();
         }
         cargando = false;

@@ -33,7 +33,7 @@ public class ResenaRepository
         if (!string.IsNullOrWhiteSpace(usuarioId))
             matchConditions["usuario_id"] = new BsonObjectId(ObjectId.Parse(usuarioId));
 
-        if (calificacionMin.HasValue)
+        if (calificacionMin.HasValue && calificacionMin.Value > 0)
             matchConditions["calificacion"] = new BsonDocument("$gte", calificacionMin.Value);
 
         // Pipeline con $lookup multi-colección hacia usuarios y restaurantes

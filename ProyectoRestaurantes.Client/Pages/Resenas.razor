@@ -175,7 +175,7 @@
             .Select(i => new DtoSelect { Id=i.GetProperty("id").GetString()!, Nombre=i.GetProperty("nombre").GetString()! }).ToList();
 
         var rUsu = await Api.GetUsuariosAsync(skip: 0, limit: 100);
-        if (rUsu.HasValue) usuariosList = rUsu.Value.EnumerateArray()
+        if (rUsu.HasValue) usuariosList = rUsu.Value.GetProperty("items").EnumerateArray()
             .Select(i => new DtoSelect { Id=i.GetProperty("id").GetString()!, Nombre=i.GetProperty("nombre").GetString()!, Email=i.GetProperty("email").GetString()! }).ToList();
     }
 

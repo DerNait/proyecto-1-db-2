@@ -59,7 +59,7 @@
                             <div style="font-size:0.75rem;color:var(--text-muted);">@p.UsuarioEmail</div>
                         </td>
                         <td>@p.RestauranteNombre</td>
-                        <td style="font-weight:700;color:var(--accent-success);">Q@p.Total.ToString("0.00")</td>
+                        <td style="font-weight:700;color:var(--accent-success);">Q@(p.Total.ToString("0.00"))</td>
                         <td>
                             <span class="badge @GetEstadoBadge(p.Estado)">
                                 <span class="status-dot @p.Estado.ToLower()" style="margin-right:4px;"></span>
@@ -192,7 +192,7 @@
             .Select(i => new DtoSelect { Id=i.GetProperty("id").GetString()!, Nombre=i.GetProperty("nombre").GetString()! }).ToList();
 
         var rUsu = await Api.GetUsuariosAsync(skip: 0, limit: 100);
-        if (rUsu.HasValue) usuariosList = rUsu.Value.EnumerateArray()
+        if (rUsu.HasValue) usuariosList = rUsu.Value.GetProperty("items").EnumerateArray()
             .Select(i => new DtoSelect { Id=i.GetProperty("id").GetString()!, Nombre=i.GetProperty("nombre").GetString()!, Email=i.GetProperty("email").GetString()! }).ToList();
 
         var rArt = await Api.GetArticulosAsync(disponible: true, skip: 0, limit: 500);

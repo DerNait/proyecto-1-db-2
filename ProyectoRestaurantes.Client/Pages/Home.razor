@@ -128,7 +128,7 @@ else
                                 var pct = (r.Promedio / 5.0) * 100;
                                 <div class="bar-item">
                                     <div class="bar-label" title="@r.Nombre">@r.Nombre</div>
-                                    <div class="bar-track"><div class="bar-fill" style="width:@pct.ToString("0")%"></div></div>
+                                    <div class="bar-track"><div class="bar-fill" style="width:@(pct.ToString("0"))%"></div></div>
                                     <div class="bar-value">@r.Promedio.ToString("0.0")</div>
                                 </div>
                             }
@@ -156,7 +156,7 @@ else
                                 var pct = maxVal > 0 ? ((double)p.CantidadVendida / maxVal) * 100 : 0;
                                 <div class="bar-item">
                                     <div class="bar-label" title="@p.Nombre">@p.Nombre</div>
-                                    <div class="bar-track"><div class="bar-fill" style="width:@pct.ToString("0")%;background:linear-gradient(90deg,#10b981,#059669)"></div></div>
+                                    <div class="bar-track"><div class="bar-fill" style="width:@(pct.ToString("0"))%;background:linear-gradient(90deg,#10b981,#059669)"></div></div>
                                     <div class="bar-value">@p.CantidadVendida</div>
                                 </div>
                             }
@@ -215,17 +215,17 @@ else
             if (top.HasValue)
                 topRestaurantes = top.Value.EnumerateArray()
                     .Select(r => new TopR(
-                        r.TryGetProperty("Nombre", out var n) ? n.GetString()! : "?",
-                        r.TryGetProperty("Promedio", out var p) ? p.GetDouble() : 0,
-                        r.TryGetProperty("TotalResenas", out var tr) ? tr.GetInt32() : 0))
+                        r.TryGetProperty("nombre", out var n) ? n.GetString()! : "?",
+                        r.TryGetProperty("promedio", out var p) ? p.GetDouble() : 0,
+                        r.TryGetProperty("totalResenas", out var tr) ? tr.GetInt32() : 0))
                     .ToList();
 
             var pl = await Api.GetPlatillosMasVendidosAsync(5);
             if (pl.HasValue)
                 platillos = pl.Value.EnumerateArray()
                     .Select(p => new PlatilloR(
-                        p.TryGetProperty("Nombre", out var n) ? n.GetString()! : "?",
-                        p.TryGetProperty("CantidadVendida", out var c) ? c.GetInt32() : 0))
+                        p.TryGetProperty("nombre", out var n) ? n.GetString()! : "?",
+                        p.TryGetProperty("cantidadVendida", out var c) ? c.GetInt32() : 0))
                     .ToList();
         }
         finally { cargandoDash = false; }

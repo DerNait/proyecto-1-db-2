@@ -34,6 +34,7 @@ public class PedidoRepository
         if (!string.IsNullOrWhiteSpace(estado))
             matchConditions["estado"] = estado;
 
+
         if (desde.HasValue || hasta.HasValue)
         {
             var dateFilter = new BsonDocument();
