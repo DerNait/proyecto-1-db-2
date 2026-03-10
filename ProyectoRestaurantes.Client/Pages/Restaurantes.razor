@@ -48,7 +48,7 @@
                 <option value="rating_promedio">Rating</option>
                 <option value="categoria">Categoria</option>
             </select>
-            <button class="btn btn-ghost btn-sm" @onclick="()=>{sortDir=sortDir*-1;Buscar();}">
+            <button class="btn btn-ghost btn-sm" @onclick="async ()=>{sortDir=sortDir*-1;await Buscar();}">
                 @(sortDir==1?"Asc":"Desc")
             </button>
         </div>
@@ -90,6 +90,10 @@
                         </td>
                         <td>
                             <div style="display:flex;gap:6px;">
+                                @* Botón Ver (ojo) *@
+                                <button class="btn btn-ghost btn-sm" title="Ver detalle" @onclick="()=>AbrirDetalle(r)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                </button>
                                 <button class="btn btn-ghost btn-sm" @onclick="()=>AbrirModal(r)">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                 </button>
@@ -117,6 +121,96 @@
     }
 </div>
 
+@* ============ MODAL DETALLE (SHOW) ============ *@
+@if (detalleVisible && detalleR != null)
+{
+    <div class="modal-overlay" @onclick="CerrarDetalle">
+        <div class="modal" style="max-width:560px;" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <div class="modal-title">Detalle del Restaurante</div>
+                <button class="modal-close" @onclick="CerrarDetalle">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                @* Banner imagen de portada *@
+                @if (!string.IsNullOrEmpty(detalleR.ImagenPortadaId))
+                {
+                    <div style="width:100%;border-radius:10px;overflow:hidden;margin-bottom:18px;max-height:200px;background:var(--bg-secondary);">
+                        <img src="@Api.GetDownloadUrl(detalleR.ImagenPortadaId)"
+                             alt="Imagen de portada"
+                             style="width:100%;height:200px;object-fit:cover;display:block;" />
+                    </div>
+                }
+                else
+                {
+                    <div style="width:100%;height:120px;border-radius:10px;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:18px;color:var(--text-muted);">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        Sin imagen de portada
+                    </div>
+                }
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Nombre</label>
+                        <div style="font-weight:600;font-size:15px;">@detalleR.Nombre</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Categoria</label>
+                        <div><span class="badge badge-info">@detalleR.Categoria</span></div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Latitud</label>
+                        <div>@detalleR.Lat.ToString("0.0000")</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Longitud</label>
+                        <div>@detalleR.Lon.ToString("0.0000")</div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Rating Promedio</label>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div class="stars" style="gap:2px;">
+                                @for(int i=1;i<=5;i++){
+                                    var filled = i <= (int)Math.Round(detalleR.RatingPromedio);
+                                    <span class="star @(filled?"filled":"empty")" style="font-size:16px;">&#9733;</span>
+                                }
+                            </div>
+                            <span style="font-weight:600;">@detalleR.RatingPromedio.ToString("0.0")</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Estado</label>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <span class="status-dot @(detalleR.Activo?"active":"inactive")"></span>
+                            <span style="font-weight:600;">@(detalleR.Activo ? "Activo" : "Inactivo")</span>
+                        </div>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(detalleR.DuenoId))
+                {
+                    <div class="form-group">
+                        <label class="form-label" style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;">ID del Dueño</label>
+                        <div style="font-size:12px;color:var(--text-muted);font-family:monospace;">@detalleR.DuenoId</div>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CerrarDetalle">Cerrar</button>
+                <button class="btn btn-ghost" @onclick="()=>{CerrarDetalle();AbrirModal(detalleR);}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Editar
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ============ MODAL CREAR / EDITAR ============ *@
 @if (modalVisible)
 {
     <div class="modal-overlay" @onclick:stopPropagation="true">
@@ -154,6 +248,38 @@
                         <input type="checkbox" @bind="fActivo"/> Restaurante activo
                     </label>
                 </div>
+
+                @* Fila de imagen de portada *@
+                <div class="form-row">
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label" style="display:flex;align-items:center;gap:6px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            Imagen de Portada
+                        </label>
+
+                        @if (!string.IsNullOrEmpty(imagenPreviewUrl))
+                        {
+                            <div style="margin-bottom:8px;border-radius:8px;overflow:hidden;max-height:140px;background:var(--bg-secondary);">
+                                <img src="@imagenPreviewUrl" alt="Preview" style="width:100%;height:140px;object-fit:cover;display:block;" />
+                            </div>
+                        }
+                        else if (!string.IsNullOrEmpty(fImagenPortadaId))
+                        {
+                            <div style="margin-bottom:8px;border-radius:8px;overflow:hidden;max-height:140px;background:var(--bg-secondary);">
+                                <img src="@Api.GetDownloadUrl(fImagenPortadaId)" alt="Imagen actual" style="width:100%;height:140px;object-fit:cover;display:block;" />
+                            </div>
+                            <small style="color:var(--text-muted);">Imagen actual — selecciona otra para reemplazarla</small>
+                        }
+
+                        <InputFile OnChange="OnImagenSeleccionada" accept="image/*" class="form-control" style="margin-top:6px;" />
+                        @if (subiendoImagen)
+                        {
+                            <small style="color:var(--text-muted);display:flex;align-items:center;gap:6px;margin-top:4px;">
+                                <div class="spinner" style="width:12px;height:12px;"></div> Subiendo imagen...
+                            </small>
+                        }
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" @onclick="CerrarModal">Cancelar</button>
@@ -167,7 +293,18 @@
 }
 
 @code {
-    private class RestauranteVm { public string? Id; public string Nombre=""; public string Categoria=""; public string DuenoId=""; public double RatingPromedio; public bool Activo; public double Lat; public double Lon; }
+    private class RestauranteVm
+    {
+        public string? Id;
+        public string Nombre = "";
+        public string Categoria = "";
+        public string DuenoId = "";
+        public double RatingPromedio;
+        public bool Activo;
+        public double Lat;
+        public double Lon;
+        public string? ImagenPortadaId;
+    }
 
     private List<RestauranteVm> restaurantes = new();
     private List<string> categorias = new();
@@ -175,9 +312,20 @@
     private string sortPor = "nombre"; private int sortDir = 1;
     private int pagina=0, limite=15, total=0;
     private int totalPaginas => (int)Math.Ceiling((double)total/limite);
-    private bool cargando, guardando, modalVisible, modalErr, isErr;
+    private bool cargando, guardando, modalVisible, modalErr, isErr, subiendoImagen;
     private string msgGlobal="", msgModal="", editId="";
     private string fNombre="", fCategoria="", fDuenoId=""; private double fLat, fLon; private bool fActivo=true;
+    private string? fImagenPortadaId;
+
+    // Imagen seleccionada para subir (bytes cacheados al seleccionar)
+    private byte[]? imagenBytes;
+    private string? imagenFileName;
+    private string? imagenContentType;
+    private string? imagenPreviewUrl;
+
+    // Modal de detalle (show)
+    private bool detalleVisible;
+    private RestauranteVm? detalleR;
 
     protected override async Task OnInitializedAsync()
     {
@@ -203,13 +351,14 @@
             restaurantes = r.Value.GetProperty("items").EnumerateArray().Select(i => new RestauranteVm
             {
                 Id = i.TryGetProperty("id", out var id) ? id.GetString() : null,
-                Nombre = i.TryGetProperty("nome", out _) ? "" : (i.TryGetProperty("nombre", out var n) ? n.GetString()! : ""),
+                Nombre = i.TryGetProperty("nombre", out var n) ? n.GetString()! : "",
                 Categoria = i.TryGetProperty("categoria", out var cat) ? cat.GetString()! : "",
                 DuenoId = i.TryGetProperty("duenoId", out var d) ? d.GetString()! : "",
                 RatingPromedio = i.TryGetProperty("ratingPromedio", out var rp) ? rp.GetDouble() : 0,
                 Activo = i.TryGetProperty("activo", out var a) ? a.GetBoolean() : false,
                 Lat = i.TryGetProperty("ubicacion", out var ub) && ub.TryGetProperty("coordinates", out var coords) && coords.GetArrayLength() > 1 ? coords[1].GetDouble() : 0,
                 Lon = i.TryGetProperty("ubicacion", out var ub2) && ub2.TryGetProperty("coordinates", out var coords2) && coords2.GetArrayLength() > 0 ? coords2[0].GetDouble() : 0,
+                ImagenPortadaId = i.TryGetProperty("imagenPortadaId", out var img) && img.ValueKind != System.Text.Json.JsonValueKind.Null ? img.GetString() : null,
             }).ToList();
         }
         cargando = false;
@@ -219,18 +368,51 @@
     private async Task CambiarPagina(int p) { pagina = p; await CargarAsync(); }
     private async Task OnBusquedaKeyUp(KeyboardEventArgs e) { if (e.Key == "Enter") await Buscar(); }
 
+    // ---- Modal Detalle ----
+    private void AbrirDetalle(RestauranteVm r) { detalleR = r; detalleVisible = true; }
+    private void CerrarDetalle() { detalleVisible = false; detalleR = null; }
+
+    // ---- Modal Crear/Editar ----
     private void AbrirModal(RestauranteVm? r)
     {
         msgModal = ""; editId = r?.Id ?? null!;
         fNombre = r?.Nombre ?? "";
         fCategoria = r?.Categoria ?? "";
         fDuenoId = r?.DuenoId ?? State.UsuarioId;
-        fLat = r == null || r.Lat == 0 ? 14.6349 : r.Lat; 
+        fLat = r == null || r.Lat == 0 ? 14.6349 : r.Lat;
         fLon = r == null || r.Lon == 0 ? -90.5069 : r.Lon;
         fActivo = r?.Activo ?? true;
+        fImagenPortadaId = r?.ImagenPortadaId;
+        imagenBytes = null;
+        imagenFileName = null;
+        imagenContentType = null;
+        imagenPreviewUrl = null;
         modalVisible = true;
     }
-    private void CerrarModal() => modalVisible = false;
+    private void CerrarModal()
+    {
+        modalVisible = false;
+        imagenBytes = null;
+        imagenFileName = null;
+        imagenContentType = null;
+        imagenPreviewUrl = null;
+    }
+
+    private async Task OnImagenSeleccionada(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        imagenFileName = file.Name;
+        imagenContentType = file.ContentType;
+
+        // Leer todos los bytes en este momento (el stream es válido solo durante este evento)
+        using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        imagenBytes = ms.ToArray();
+
+        // Previsualización inline en base64
+        imagenPreviewUrl = $"data:{imagenContentType};base64,{Convert.ToBase64String(imagenBytes)}";
+    }
 
     private async Task Guardar()
     {
@@ -238,9 +420,41 @@
         guardando = true; msgModal = "";
         var payload = new { nombre = fNombre, categoria = fCategoria, duenoId = fDuenoId,
             ubicacion = new { type = "Point", coordinates = new[] { fLon, fLat } }, activo = fActivo, ratingPromedio = 0.0 };
-        bool ok = editId == null
-            ? await Api.CrearRestauranteAsync(payload)
-            : await Api.ActualizarRestauranteAsync(editId, payload);
+
+        string? idResultado = null;
+        bool ok;
+
+        if (editId == null)
+        {
+            // Crear — necesitamos el Id resultante para subir imagen
+            var created = await Api.GetRestauranteCreado(payload);
+            ok = created.HasValue;
+            if (ok && created.HasValue)
+                idResultado = created.Value.TryGetProperty("id", out var propId) ? propId.GetString() : null;
+        }
+        else
+        {
+            ok = await Api.ActualizarRestauranteAsync(editId, payload);
+            idResultado = editId;
+        }
+
+        // Subir imagen si se seleccionó una (bytes ya leídos en OnImagenSeleccionada)
+        if (ok && imagenBytes != null && !string.IsNullOrEmpty(idResultado))
+        {
+            subiendoImagen = true;
+            StateHasChanged();
+            try
+            {
+                var imgOk = await Api.SubirImagenRestauranteAsync(idResultado, imagenBytes, imagenFileName!, imagenContentType!);
+                if (!imgOk) msgModal = "Advertencia: restaurante guardado pero la imagen no se pudo subir.";
+            }
+            catch
+            {
+                msgModal = "Advertencia: restaurante guardado pero hubo un error al subir la imagen.";
+            }
+            finally { subiendoImagen = false; }
+        }
+
         if (ok) { modalVisible = false; await CargarAsync(); msgGlobal = editId==null?"Restaurante creado.":"Restaurante actualizado."; isErr=false; }
         else { msgModal = "Error al guardar."; modalErr = true; }
         guardando = false;

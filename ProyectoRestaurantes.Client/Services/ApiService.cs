@@ -73,6 +73,14 @@ public class ApiService
         return res.IsSuccessStatusCode;
     }
 
+    public async Task<JsonElement?> GetRestauranteCreado(object restaurante)
+    {
+        SetAuth();
+        var res = await _http.PostAsJsonAsync($"{BaseUrl}/restaurantes", restaurante);
+        if (!res.IsSuccessStatusCode) return null;
+        return await res.Content.ReadFromJsonAsync<JsonElement>();
+    }
+
     public async Task<bool> ActualizarRestauranteAsync(string id, object restaurante)
     {
         SetAuth();
@@ -84,6 +92,17 @@ public class ApiService
     {
         SetAuth();
         var res = await _http.DeleteAsync($"{BaseUrl}/restaurantes/{id}");
+        return res.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> SubirImagenRestauranteAsync(string id, byte[] bytes, string fileName, string contentType)
+    {
+        SetAuth();
+        using var content = new MultipartFormDataContent();
+        var fc = new ByteArrayContent(bytes);
+        fc.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        content.Add(fc, "archivo", fileName);
+        var res = await _http.PostAsync($"{BaseUrl}/restaurantes/{id}/imagen", content);
         return res.IsSuccessStatusCode;
     }
 
