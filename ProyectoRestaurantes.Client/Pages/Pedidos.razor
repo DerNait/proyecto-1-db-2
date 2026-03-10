@@ -67,9 +67,13 @@
                             </span>
                         </td>
                         <td style="font-size:0.78rem;color:var(--text-muted);">@p.Fecha.ToString("dd/MM/yy HH:mm")</td>
-                        <td>
+                        <td style="display:flex;gap:6px;">
                             @if (p.Estado != "CANCELADO" && p.Estado != "ENTREGADO")
                             {
+                                <button class="btn btn-success btn-sm" @onclick="()=>Entregar(p.Id!)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                    Entregar
+                                </button>
                                 <button class="btn btn-warning btn-sm" @onclick="()=>Cancelar(p.Id!)">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                                     Cancelar
@@ -238,6 +242,13 @@
     {
         var(ok,msg) = await Api.CancelarPedidoAsync(id);
         msgGlobal = ok ? "Pedido cancelado y stock restaurado." : $"Error: {msg}"; isErr=!ok;
+        if(ok) await CargarAsync();
+    }
+
+    private async Task Entregar(string id)
+    {
+        var(ok,msg) = await Api.ActualizarEstadoPedidoAsync(id, "ENTREGADO");
+        msgGlobal = ok ? "Pedido marcado como entregado." : $"Error: {msg}"; isErr=!ok;
         if(ok) await CargarAsync();
     }
 

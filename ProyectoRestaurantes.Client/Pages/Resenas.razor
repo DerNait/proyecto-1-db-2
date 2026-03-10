@@ -136,7 +136,7 @@
                             <option value="">Selecciona un articulo del pedido...</option>
                             @foreach (var item in articulosPedido)
                             {
-                                <option value="@item.Id">@item.Nombre (x@item.Cantidad)</option>
+                                <option value="@item.Id">@item.Nombre (x@(item.Cantidad))</option>
                             }
                         </select>
                     </div>

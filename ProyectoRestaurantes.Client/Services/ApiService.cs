@@ -184,6 +184,14 @@ public class ApiService
         return (res.IsSuccessStatusCode, body);
     }
 
+    public async Task<(bool Ok, string Msg)> ActualizarEstadoPedidoAsync(string id, string estado)
+    {
+        SetAuth();
+        var res = await _http.PutAsJsonAsync($"{BaseUrl}/pedidos/{id}/estado", new { estado });
+        var body = await res.Content.ReadAsStringAsync();
+        return (res.IsSuccessStatusCode, body);
+    }
+
     public async Task<JsonElement?> GetPedidosEntregadosUsuarioAsync(string usuarioId)
     {
         SetAuth();

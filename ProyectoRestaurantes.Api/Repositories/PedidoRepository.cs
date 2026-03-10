@@ -90,6 +90,14 @@ public class PedidoRepository
     public async Task<Pedido?> ObtenerPorIdAsync(string id) =>
         await _pedidos.Find(p => p.Id == id).FirstOrDefaultAsync();
 
+    public async Task<bool> ActualizarEstadoAsync(string id, string nuevoEstado)
+    {
+        var filtro = Builders<Pedido>.Filter.Eq(p => p.Id, id);
+        var update = Builders<Pedido>.Update.Set(p => p.Estado, nuevoEstado);
+        var res = await _pedidos.UpdateOneAsync(filtro, update);
+        return res.ModifiedCount > 0;
+    }
+
     // Actualizar estado de muchos pedidos a la vez (UpdateMany)
     public async Task<long> ActualizarEstadoMultiplesAsync(List<string> ids, string nuevoEstado)
     {
