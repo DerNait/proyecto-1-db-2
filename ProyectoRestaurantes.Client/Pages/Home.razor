@@ -1,0 +1,101 @@
+@page "/"
+@inject HttpClient Http
+
+<PageTitle>Dashboard Restaurantes</PageTitle>
+
+<div class="container mt-4">
+    <h1 class="text-center">Sistema de Pedidos 🍕</h1>
+    <hr />
+
+    @if (string.IsNullOrEmpty(jwtToken))
+    {
+        <div class="card mx-auto" style="max-width: 400px;">
+            <div class="card-body">
+                <h3 class="card-title text-center">Iniciar Sesión</h3>
+                <input @bind="email" placeholder="Correo (ej. kevin@test.com)" class="form-control mb-3" />
+                <input @bind="password" type="password" placeholder="Contraseña" class="form-control mb-3" />
+                <button class="btn btn-primary w-100" @onclick="HacerLogin">Entrar al Sistema</button>
+                <p class="text-danger mt-2 text-center">@mensajeLogin</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-success text-center">
+            <h3>¡Bienvenido! Tienes acceso al sistema. 🔒</h3>
+            <p>Tu Token JWT está activo y asegurando tus peticiones.</p>
+        </div>
+
+        <div class="card mx-auto text-center mt-4" style="max-width: 500px;">
+            <div class="card-body">
+                <h4>Probar Transacción ACID</h4>
+                <p>Al hacer clic, se descontará el inventario en Atlas.</p>
+                <button class="btn btn-success btn-lg" @onclick="HacerPedido">Pedir Tacos al Pastor (x3)</button>
+                <p class="text-info mt-3 fw-bold">@mensajePedido</p>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    // Variables vinculadas a la interfaz (como las variables públicas en Unity)
+    private string email = "kevin@test.com";
+    private string password = "12345";
+    private string jwtToken = "";
+    private string mensajeLogin = "";
+    private string mensajePedido = "";
+
+    private string apiUrl = "http://localhost:5257/api";
+
+    private class LoginRequest { public string Email { get; set; } public string Password { get; set; } }
+    private class LoginResponse { public string Token { get; set; } }
+
+    private async Task HacerLogin()
+    {
+        mensajeLogin = "Conectando...";
+        var request = new LoginRequest { Email = email, Password = password };
+        var response = await Http.PostAsJsonAsync($"{apiUrl}/auth/login", request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+            jwtToken = result.Token;
+            
+            // Le "ponemos el gafete" al HttpClient para todas las peticiones futuras
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", jwtToken);
+            mensajeLogin = "";
+        }
+        else
+        {
+            mensajeLogin = "Error al iniciar sesión. Verifica credenciales.";
+        }
+    }
+
+    private async Task HacerPedido()
+    {
+        mensajePedido = "Procesando transacción...";
+        
+        // El mismo JSON DTO que usamos en Swagger
+        var nuevoPedido = new
+        {
+            usuarioId = "65dfa1b2c8b1f8e4e1a10001",
+            restauranteId = "65dfa1b2c8b1f8e4e1a10002",
+            items = new[] { 
+                new { articuloId = "65dfa1b2c8b1f8e4e1a10003", cantidad = 3 } 
+            },
+            ubicacionEntrega = new { type = "Point", coordinates = new[] { -90.513, 14.634 } }
+        };
+
+        var response = await Http.PostAsJsonAsync($"{apiUrl}/pedidos", nuevoPedido);
+        
+        if (response.IsSuccessStatusCode)
+        {
+            mensajePedido = "✅ ¡Pedido creado exitosamente con transacción ACID!";
+        }
+        else
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            mensajePedido = $"❌ Error (Seguramente falta stock): {error}";
+        }
+    }
+}

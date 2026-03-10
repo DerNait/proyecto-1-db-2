@@ -1,0 +1,58 @@
+# ========================
+# .NET / ASP.NET Core
+# ========================
+
+# Carpetas de build
+bin/
+obj/
+
+# Archivos de usuario de Visual Studio
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+
+# Rider / JetBrains
+.idea/
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+!.nuget/NuGet.Config
+
+# ========================
+# SECRETOS / CONFIGURACIÓN
+# ========================
+
+# appsettings con datos sensibles (connection strings, JWT keys, etc.)
+appsettings.json
+appsettings.Development.json
+
+# Solo si usas secrets de usuario de .NET
+secrets.json
+
+# ========================
+# Blazor WebAssembly
+# ========================
+
+wwwroot/css/app.css
+
+# ========================
+# Windows
+# ========================
+
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ========================
+# Misceláneos
+# ========================
+
+*.log
+*.tmp
+.DS_Store
