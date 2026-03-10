@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using ProyectoRestaurantes.Api.Models;
 using ProyectoRestaurantes.Api.Repositories;
+using ProyectoRestaurantes.Api.Services;
 
 namespace ProyectoRestaurantes.Api.Controllers;
 
@@ -9,8 +10,13 @@ namespace ProyectoRestaurantes.Api.Controllers;
 public class ResenasController : ControllerBase
 {
     private readonly ResenaRepository _repo;
+    private readonly ResenaService _resenaService;
 
-    public ResenasController(ResenaRepository repo) => _repo = repo;
+    public ResenasController(ResenaRepository repo, ResenaService resenaService)
+    {
+        _repo = repo;
+        _resenaService = resenaService;
+    }
 
     [HttpGet]
     public async Task<IActionResult> Listar(
@@ -44,11 +50,18 @@ public class ResenasController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Crear([FromBody] Resena resena)
     {
-        if (resena.Calificacion < 1 || resena.Calificacion > 5)
-            return BadRequest(new { error = "La calificación debe ser entre 1 y 5." });
+        try
+        {
+            if (resena.Calificacion < 1 || resena.Calificacion > 5)
+                return BadRequest(new { error = "La calificación debe ser entre 1 y 5." });
 
-        var creada = await _repo.CrearAsync(resena);
-        return Ok(creada);
+            var creada = await _resenaService.CrearResenaTransaccionalAsync(resena);
+            return Ok(creada);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     [HttpDelete("{id}")]

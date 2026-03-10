@@ -31,6 +31,7 @@ builder.Services.AddScoped(sp =>
 
 // Servicios y Repositorios
 builder.Services.AddScoped<PedidoService>();
+builder.Services.AddScoped<ResenaService>();
 builder.Services.AddScoped<GridFsService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ReportesRepository>();
@@ -101,6 +102,14 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+// Inicializar índices de MongoDB al arrancar la aplicación
+using (var scope = app.Services.CreateScope())
+{
+    var database = scope.ServiceProvider.GetRequiredService<IMongoDatabase>();
+    var indexService = new IndexInitializationService(database);
+    await indexService.CrearIndicesAsync();
+}
 
 // Activar Swagger para probar la API fácilmente
 if (app.Environment.IsDevelopment())
